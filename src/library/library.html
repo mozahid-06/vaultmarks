@@ -44,7 +44,60 @@
       </main>
     </div>
 
-    <dialog id="detail" class="dialog"></dialog>
+    <dialog id="detail" class="dialog">
+      <div id="detail-view">
+        <img id="detail-cover" class="detail-cover" alt="" hidden>
+        <h2 id="detail-heading"></h2>
+        <a id="detail-link" class="muted detail-link" target="_blank" rel="noreferrer"></a>
+        <p id="detail-date" class="muted"></p>
+        <p id="detail-text" class="detail-text"></p>
+        <div id="detail-chips" class="chips"></div>
+        <dl class="settings-list">
+          <dt>Collection</dt>
+          <dd id="detail-collection-label"></dd>
+        </dl>
+        <div id="detail-status" class="dialog-status" role="status" aria-live="polite"></div>
+        <div class="actions">
+          <button id="detail-open" class="primary" type="button">Open</button>
+          <button id="detail-copy" type="button">Copy link</button>
+          <button id="detail-obsidian" type="button" hidden>Open in Obsidian</button>
+          <button id="detail-edit" type="button">Edit</button>
+          <button id="detail-move" type="button">Move to…</button>
+          <button id="detail-delete" type="button">Delete</button>
+          <button id="detail-close" type="button">Close</button>
+        </div>
+      </div>
+
+      <form id="detail-form" hidden>
+        <h2 id="detail-form-heading"></h2>
+        <label class="field">
+          <span class="field-label">Title</span>
+          <input id="detail-title" type="text" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">URL</span>
+          <input id="detail-url" type="text" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">Description</span>
+          <textarea id="detail-description" rows="4"></textarea>
+        </label>
+        <div class="field">
+          <span class="field-label">Tags</span>
+          <div id="detail-tags" class="chips"></div>
+          <input id="detail-tag-input" class="tag-input" type="text" placeholder="Add a tag…" autocomplete="off" spellcheck="false">
+        </div>
+        <label class="field">
+          <span class="field-label">Collection</span>
+          <select id="detail-collection"></select>
+        </label>
+        <div id="detail-form-status" class="dialog-status" role="status" aria-live="polite"></div>
+        <div class="actions">
+          <button id="detail-save" class="primary" type="submit">Save</button>
+          <button id="detail-cancel" type="button">Cancel</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="settings" class="dialog">
       <h2>Settings</h2>

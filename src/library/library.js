@@ -7,9 +7,23 @@ import {
   clearStoredStore,
   scanStore,
   createDirectory,
+  updateFile,
+  moveFile,
+  trashFile,
+  writeNewFile,
 } from '../lib/vaultfs.js';
-import { buildIndex, filterNotes, formatDate, domainOf } from '../lib/notes.js';
-import { h, icon, toast, faviconUrl } from '../lib/ui.js';
+import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, BASE_TAG } from '../lib/notes.js';
+import { createNoteText, filenameBase } from '../lib/markdown.js';
+import { dirOf, baseOf } from '../lib/paths.js';
+import { isSavableUrl } from '../lib/capture.js';
+import {
+  h,
+  icon,
+  toast,
+  faviconUrl,
+  createTagInput,
+  fillCollectionSelect,
+} from '../lib/ui.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -21,6 +35,9 @@ const state = {
   skipped: 0,
   generation: 0,
   dialogOpen: false,
+  mode: 'view',
+  currentNote: null,
+  tagInput: null,
 };
 
 const expanded = new Set();
@@ -190,6 +207,26 @@ function coverElement(note) {
   return wrap;
 }
 
+function rowAction(action, iconName, label, note) {
+  return h(
+    'button',
+    {
+      type: 'button',
+      className: 'icon-button',
+      dataset: { action },
+      title: label,
+      'aria-label': label,
+      onclick: (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        if (action === 'delete') deleteNote(note);
+        else openDetail(note, action === 'edit' ? 'edit' : 'view');
+      },
+    },
+    icon(iconName),
+  );
+}
+
 function renderRow(note) {
   return h(
     'article',
@@ -211,7 +248,13 @@ function renderRow(note) {
         h('span', { text: formatDate(note.created) }),
       ),
     ),
-    h('div', { className: 'row-actions' }),
+    h(
+      'div',
+      { className: 'row-actions' },
+      rowAction('view', 'eye', `Details for ${note.title}`, note),
+      rowAction('edit', 'pencil', `Edit ${note.title}`, note),
+      rowAction('delete', 'trash', `Delete ${note.title}`, note),
+    ),
   );
 }
 
@@ -228,6 +271,298 @@ function renderList() {
   if (!document.body.classList.contains('scanning')) {
     el('summary').textContent = `${notes.length} bookmark${notes.length === 1 ? '' : 's'}`;
   }
+}
+
+const WRITE_ERRORS = {
+  conflict: 'This note changed in Obsidian. Reload and try again.',
+  'needs-permission': 'Vaultmarks lost access to your vault folder.',
+  partial: 'The copy worked but the original file could not be removed. Check the folder.',
+  exists: 'A collection with that name already exists.',
+  'invalid-name': 'That collection name is not allowed.',
+};
+
+function messageFor(error) {
+  return WRITE_ERRORS[error?.code] ?? error?.message ?? String(error);
+}
+
+function notifyChanged() {
+  try {
+    chrome.runtime.sendMessage({ type: 'vault-changed' }).catch(() => {});
+  } catch {
+    // No page is listening; nothing to notify.
+  }
+}
+
+function todayIso() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+function userTags(tags) {
+  return tags.filter((tag) => tag.toLowerCase() !== BASE_TAG);
+}
+
+function sameTags(a, b) {
+  const normalize = (list) => [...list].map((tag) => tag.toLowerCase()).sort().join('\u0000');
+  return normalize(a) === normalize(b);
+}
+
+function setDetailStatus(node) {
+  const target = state.mode === 'view' ? el('detail-status') : el('detail-form-status');
+  target.replaceChildren();
+  if (node != null) target.append(node);
+}
+
+function closeDetail() {
+  state.currentNote = null;
+  if (el('detail').open) el('detail').close();
+}
+
+function renderDetailView(note) {
+  el('detail-form').hidden = true;
+  el('detail-view').hidden = false;
+
+  const cover = el('detail-cover');
+  if (note.cover) {
+    cover.src = note.cover;
+    cover.hidden = false;
+    cover.onerror = () => {
+      cover.hidden = true;
+    };
+  } else {
+    cover.hidden = true;
+    cover.removeAttribute('src');
+  }
+
+  el('detail-heading').textContent = note.title;
+  const link = el('detail-link');
+  link.textContent = note.url;
+  link.href = note.url;
+  el('detail-date').textContent = [formatDate(note.created), domainOf(note.url)].filter(Boolean).join(' · ');
+  el('detail-text').textContent = note.description === '' ? 'No description.' : note.description;
+  el('detail-chips').replaceChildren(
+    ...userTags(note.tags).map((tag) => h('span', { className: 'chip' }, h('span', { text: tag }))),
+  );
+  el('detail-collection-label').textContent = note.dir === '' ? 'Unfiled' : note.dir;
+
+  const obsidian = el('detail-obsidian');
+  if (state.settings?.obsidianLinks && state.settings.vaultName) {
+    obsidian.hidden = false;
+    obsidian.onclick = () => {
+      window.open(obsidianUri(state.settings.vaultName, state.settings.storePath, note.key));
+    };
+  } else {
+    obsidian.hidden = true;
+  }
+
+  setDetailStatus(null);
+}
+
+function renderDetailEdit(note) {
+  el('detail-view').hidden = true;
+  el('detail-form').hidden = false;
+  el('detail-form-heading').textContent = state.mode === 'create' ? 'New bookmark' : 'Edit bookmark';
+
+  el('detail-title').value = note?.title ?? '';
+  el('detail-url').value = note?.url ?? '';
+  el('detail-description').value = note?.description ?? '';
+
+  fillCollectionSelect(
+    el('detail-collection'),
+    state.index,
+    note?.dir ?? (state.collection !== '' ? state.collection : ''),
+  );
+
+  state.tagInput = createTagInput({
+    input: el('detail-tag-input'),
+    chips: el('detail-tags'),
+    initial: note ? userTags(note.tags) : [],
+    suggestions: (state.index?.tags ?? []).map((tag) => tag.name),
+    exclude: [BASE_TAG],
+  });
+
+  setDetailStatus(null);
+  el('detail-title').focus();
+}
+
+function openDetail(note, mode) {
+  state.mode = mode;
+  state.currentNote = note;
+  el('detail').showModal();
+  state.dialogOpen = true;
+  if (mode === 'edit') renderDetailEdit(note);
+  else renderDetailView(note);
+}
+
+function openCreate() {
+  state.mode = 'create';
+  state.currentNote = null;
+  el('detail').showModal();
+  state.dialogOpen = true;
+  renderDetailEdit(null);
+}
+
+async function reloadNote(key) {
+  await refresh();
+  const fresh = state.index?.byKey.get(key) ?? null;
+  if (!fresh) setDetailStatus(h('span', { text: 'This note no longer exists.' }));
+  return fresh;
+}
+
+function showConflict(note) {
+  setDetailStatus(
+    h(
+      'div',
+      { className: 'status-row' },
+      h('span', { text: 'This note changed in Obsidian. Reload and try again.' }),
+      h(
+        'div',
+        { className: 'actions' },
+        h('button', {
+          type: 'button',
+          text: 'Reload',
+          onclick: async () => {
+            const fresh = await reloadNote(note.key);
+            if (fresh) {
+              state.currentNote = fresh;
+              renderDetailEdit(fresh);
+            }
+          },
+        }),
+      ),
+    ),
+  );
+}
+
+async function deleteNote(note) {
+  if (!window.confirm('Move this bookmark to the hidden trash folder?')) return;
+  try {
+    await trashFile(note);
+    notifyChanged();
+    if (state.currentNote?.key === note.key) closeDetail();
+    await refresh();
+    toast('Moved to the hidden trash folder', 'success');
+  } catch (error) {
+    toast(messageFor(error), 'error');
+    if (error?.code === 'needs-permission') showReconnect();
+  }
+}
+
+async function onDetailSubmit(event) {
+  event.preventDefault();
+  const title = el('detail-title').value.trim();
+  const url = el('detail-url').value.trim();
+  const description = el('detail-description').value.trim();
+  const dir = el('detail-collection').value;
+  const tags = [BASE_TAG, ...state.tagInput.getTags()];
+
+  if (title === '') {
+    setDetailStatus('Add a title.');
+    el('detail-title').focus();
+    return;
+  }
+  if (!isSavableUrl(url)) {
+    setDetailStatus('Enter a valid http(s) URL.');
+    el('detail-url').focus();
+    return;
+  }
+
+  el('detail-save').disabled = true;
+  try {
+    if (state.mode === 'create') {
+      const text = createNoteText({
+        title,
+        url,
+        created: todayIso(),
+        description,
+        image: '',
+        favicon: '',
+        tags,
+      });
+      await writeNewFile(dir, filenameBase(title, domainOf(url)), text);
+      notifyChanged();
+      closeDetail();
+      await refresh();
+      toast('Bookmark created', 'success');
+      return;
+    }
+
+    const note = state.currentNote;
+    const changes = {};
+    if (title !== note.title) changes.title = title;
+    if (url !== note.url) changes.url = url;
+    if (description !== note.description) changes.description = description;
+    if (!sameTags(userTags(note.tags), state.tagInput.getTags())) changes.tags = tags;
+
+    let key = note.key;
+    let currentDir = note.dir;
+    if (Object.keys(changes).length > 0) {
+      const updated = await updateFile(note, changes);
+      key = updated.key;
+      currentDir = dirOf(key);
+      state.currentNote = { ...note, key, dir: currentDir, filename: baseOf(key) };
+    }
+
+    if (dir !== currentDir) {
+      try {
+        await moveFile({ ...note, key, dir: currentDir, filename: baseOf(key) }, dir);
+      } catch (moveError) {
+        setDetailStatus(`Saved, but moving failed: ${messageFor(moveError)}`);
+        notifyChanged();
+        await refresh();
+        return;
+      }
+    }
+
+    notifyChanged();
+    closeDetail();
+    await refresh();
+    toast('Bookmark saved', 'success');
+  } catch (error) {
+    if (error?.code === 'conflict') showConflict(state.currentNote);
+    else setDetailStatus(messageFor(error));
+    if (error?.code === 'needs-permission') showReconnect();
+  } finally {
+    el('detail-save').disabled = false;
+  }
+}
+
+function wireDetail() {
+  el('new-bookmark').addEventListener('click', openCreate);
+  el('detail-form').addEventListener('submit', onDetailSubmit);
+  el('detail-cancel').addEventListener('click', () => {
+    if (state.mode === 'create') closeDetail();
+    else {
+      state.mode = 'view';
+      renderDetailView(state.currentNote);
+    }
+  });
+  el('detail-close').addEventListener('click', closeDetail);
+  el('detail-open').addEventListener('click', () => {
+    if (state.currentNote) window.open(state.currentNote.url, '_blank');
+  });
+  el('detail-copy').addEventListener('click', async () => {
+    if (!state.currentNote) return;
+    try {
+      await navigator.clipboard.writeText(state.currentNote.url);
+      toast('Link copied', 'success');
+    } catch {
+      toast('Could not copy the link', 'error');
+    }
+  });
+  el('detail-edit').addEventListener('click', () => {
+    state.mode = 'edit';
+    renderDetailEdit(state.currentNote);
+  });
+  el('detail-move').addEventListener('click', () => {
+    state.mode = 'edit';
+    renderDetailEdit(state.currentNote);
+    el('detail-collection').focus();
+  });
+  el('detail-delete').addEventListener('click', () => {
+    if (state.currentNote) deleteNote(state.currentNote);
+  });
 }
 
 async function chooseFolder() {
@@ -352,6 +687,7 @@ async function init() {
   el('search').addEventListener('input', onSearchInput);
   document.addEventListener('keydown', onKeydown);
   trackDialogs();
+  wireDetail();
 
   window.addEventListener('focus', () => scheduleRefresh(300));
   document.addEventListener('visibilitychange', () => {
