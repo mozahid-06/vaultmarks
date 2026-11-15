@@ -16,6 +16,7 @@ import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, BASE_TAG } 
 import { createNoteText, filenameBase } from '../lib/markdown.js';
 import { dirOf, baseOf } from '../lib/paths.js';
 import { isSavableUrl } from '../lib/capture.js';
+import { isTabView } from '../lib/view.js';
 import {
   h,
   icon,
@@ -23,6 +24,7 @@ import {
   faviconUrl,
   createTagInput,
   fillCollectionSelect,
+  openLibraryTab,
 } from '../lib/ui.js';
 
 const el = (id) => document.getElementById(id);
@@ -674,15 +676,27 @@ function trackDialogs() {
   }
 }
 
+const tabView = isTabView(location.search);
+if (tabView) document.documentElement.classList.remove('panel');
+
 async function init() {
   el('open-settings').append(icon('settings'));
   el('new-collection').append(icon('plus'));
+  el('new-bookmark').append(icon('plus'));
+  el('expand').append(icon('external'));
+  el('expand').addEventListener('click', () => openLibraryTab());
+  if (tabView) el('expand').hidden = true;
   el('open-settings').addEventListener('click', () => {
     renderSettings();
     el('settings').showModal();
     state.dialogOpen = true;
   });
-  el('choose-folder').addEventListener('click', chooseFolder);
+  el('choose-folder').addEventListener('click', () => {
+    // Setup is a one-time act best done in a durable tab: a folder picker can
+    // otherwise close the popup. The tab runs the picker in place.
+    if (tabView) chooseFolder();
+    else openLibraryTab();
+  });
   el('reconnect-folder').addEventListener('click', reconnect);
   el('new-collection').addEventListener('click', newCollection);
   el('search').addEventListener('input', onSearchInput);

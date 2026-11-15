@@ -61,7 +61,7 @@ export function faviconUrl(pageUrl, size = 32) {
 }
 
 export async function openLibraryTab() {
-  const url = chrome.runtime.getURL('src/library/library.html');
+  const url = chrome.runtime.getURL('src/library/library.html?view=tab');
   const storedId = await getLibraryTabId();
   if (storedId != null) {
     try {
