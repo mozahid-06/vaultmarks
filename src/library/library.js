@@ -12,10 +12,10 @@ import {
   trashFile,
   writeNewFile,
 } from '../lib/vaultfs.js';
-import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, BASE_TAG } from '../lib/notes.js';
+import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
 import { createNoteText, filenameBase } from '../lib/markdown.js';
 import { dirOf, baseOf } from '../lib/paths.js';
-import { isSavableUrl } from '../lib/capture.js';
+import { isSavableUrl, savePrefill, captureActiveTab } from '../lib/capture.js';
 import { isTabView } from '../lib/view.js';
 import {
   h,
@@ -40,6 +40,9 @@ const state = {
   mode: 'view',
   currentNote: null,
   tagInput: null,
+  prefill: null,
+  captured: null,
+  saveAnyway: false,
 };
 
 const expanded = new Set();
@@ -319,6 +322,8 @@ function setDetailStatus(node) {
 
 function closeDetail() {
   state.currentNote = null;
+  state.prefill = null;
+  state.captured = null;
   if (el('detail').open) el('detail').close();
 }
 
@@ -365,16 +370,29 @@ function renderDetailView(note) {
 function renderDetailEdit(note) {
   el('detail-view').hidden = true;
   el('detail-form').hidden = false;
-  el('detail-form-heading').textContent = state.mode === 'create' ? 'New bookmark' : 'Edit bookmark';
+  const headings = { save: 'Save bookmark', create: 'New bookmark', edit: 'Edit bookmark' };
+  el('detail-form-heading').textContent = headings[state.mode] ?? 'Edit bookmark';
 
-  el('detail-title').value = note?.title ?? '';
-  el('detail-url').value = note?.url ?? '';
-  el('detail-description').value = note?.description ?? '';
+  const source = state.mode === 'edit' ? note : state.prefill;
+  el('detail-title').value = source?.title ?? '';
+  el('detail-url').value = source?.url ?? '';
+  el('detail-description').value = source?.description ?? '';
+
+  const cover = el('detail-form-cover');
+  if (state.captured?.image) {
+    cover.src = state.captured.image;
+    cover.hidden = false;
+  } else {
+    cover.hidden = true;
+    cover.removeAttribute('src');
+  }
 
   fillCollectionSelect(
     el('detail-collection'),
     state.index,
-    note?.dir ?? (state.collection !== '' ? state.collection : ''),
+    state.mode === 'edit'
+      ? (note?.dir ?? '')
+      : (state.prefill?.collection ?? (state.collection !== '' ? state.collection : '')),
   );
 
   state.tagInput = createTagInput({
@@ -398,12 +416,62 @@ function openDetail(note, mode) {
   else renderDetailView(note);
 }
 
-function openCreate() {
-  state.mode = 'create';
+function openCreate(prefill = null) {
+  state.mode = prefill ? 'save' : 'create';
+  state.prefill = prefill;
+  state.captured = prefill ? { image: prefill.image, favicon: prefill.favicon } : null;
+  state.saveAnyway = false;
   state.currentNote = null;
   el('detail').showModal();
   state.dialogOpen = true;
   renderDetailEdit(null);
+}
+
+async function ensureIndex() {
+  if (!state.index) await refresh();
+}
+
+async function onSavePage() {
+  let meta;
+  try {
+    meta = await captureActiveTab();
+  } catch {
+    toast("This page can't be saved.", 'error');
+    return;
+  }
+  await ensureIndex();
+  openCreate(savePrefill(meta, {
+    lastCollection: state.settings?.lastCollection ?? '',
+    selectedCollection: state.collection,
+  }));
+}
+
+function showDuplicate(existing) {
+  const where = existing.dir === '' ? 'Unfiled' : existing.dir;
+  setDetailStatus(
+    h(
+      'div',
+      { className: 'status-row' },
+      h('span', { text: `Already saved in ${where}` }),
+      h(
+        'div',
+        { className: 'actions' },
+        h('button', {
+          type: 'button',
+          text: 'Open',
+          onclick: () => window.open(existing.url, '_blank'),
+        }),
+        h('button', {
+          type: 'button',
+          text: 'Save anyway',
+          onclick: () => {
+            state.saveAnyway = true;
+            el('detail-form').requestSubmit();
+          },
+        }),
+      ),
+    ),
+  );
 }
 
 async function reloadNote(key) {
@@ -473,21 +541,27 @@ async function onDetailSubmit(event) {
 
   el('detail-save').disabled = true;
   try {
-    if (state.mode === 'create') {
+    if (state.mode === 'create' || state.mode === 'save') {
+      const existing = findByUrl(state.index, url);
+      if (existing && !state.saveAnyway) {
+        showDuplicate(existing);
+        return;
+      }
       const text = createNoteText({
         title,
         url,
         created: todayIso(),
         description,
-        image: '',
-        favicon: '',
+        image: state.captured?.image ?? '',
+        favicon: state.captured?.favicon ?? '',
         tags,
       });
       await writeNewFile(dir, filenameBase(title, domainOf(url)), text);
+      if (state.mode === 'save') state.settings = await saveSettings({ lastCollection: dir });
       notifyChanged();
       closeDetail();
       await refresh();
-      toast('Bookmark created', 'success');
+      toast('Saved', 'success');
       return;
     }
 
@@ -532,10 +606,13 @@ async function onDetailSubmit(event) {
 }
 
 function wireDetail() {
-  el('new-bookmark').addEventListener('click', openCreate);
+  el('new-bookmark').addEventListener('click', async () => {
+    await ensureIndex();
+    openCreate();
+  });
   el('detail-form').addEventListener('submit', onDetailSubmit);
   el('detail-cancel').addEventListener('click', () => {
-    if (state.mode === 'create') closeDetail();
+    if (state.mode === 'create' || state.mode === 'save') closeDetail();
     else {
       state.mode = 'view';
       renderDetailView(state.currentNote);
@@ -686,6 +763,8 @@ async function init() {
   el('expand').append(icon('external'));
   el('expand').addEventListener('click', () => openLibraryTab());
   if (tabView) el('expand').hidden = true;
+  if (tabView) el('save-page').hidden = true;
+  else el('save-page').addEventListener('click', onSavePage);
   el('open-settings').addEventListener('click', () => {
     renderSettings();
     el('settings').showModal();

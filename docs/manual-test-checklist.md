@@ -17,22 +17,30 @@ chromium --user-data-dir=/tmp/vaultmarks-chromium \
 
 Load unpacked from `chrome://extensions` if the flag is not used.
 
-## Popup (Task 7)
+## Panel save (unified)
 
-- [ ] The toolbar icon opens the popup; with no folder chosen it shows the
-      setup state and a **Choose vault folder** button.
-- [ ] After choosing `/tmp/vaultmarks-test-vault` in the library, reopening
-      the popup pre-fills title, description and cover.
-- [ ] **Save** creates a note; open it and confirm the exact frontmatter
-      shape (`title`, `url`, `created`, `description`, optional `image` /
-      `favicon`, `tags` with `bookmarks`, blank line, cover, description,
-      `[Open original ↗](url)`).
-- [ ] Saving the same URL again says **Already saved in &lt;collection&gt;**
+- [ ] The toolbar icon opens the two-pane panel (collections sidebar + list +
+      search) at 780×600: both panes are visible, the page itself does not
+      scroll, and the sidebar and list scroll internally.
+- [ ] **Save page** on a normal web page opens the save dialog prefilled with
+      title, description and the last-used collection, with the captured cover
+      shown at the top (read-only).
+- [ ] Saving writes the note and it appears in the list immediately (and in an
+      open library tab via `vault-changed`).
+- [ ] With `chrome://settings` active, **Save page** toasts
+      "This page can't be saved." and nothing else changes.
+- [ ] Saving the same URL twice says **Already saved in &lt;collection&gt;**
       with **Open** and **Save anyway**; **Save anyway** writes a second note
       (`Name (2).md`).
-- [ ] Navigating to `chrome://settings` and opening the popup says
-      "This page can't be saved."
-- [ ] <kbd>Ctrl/Cmd</kbd>+<kbd>Enter</kbd> saves.
+- [ ] **Save page** defaults to the last-used collection; **+ New** defaults to
+      the selected collection and does not change the last-used one.
+- [ ] The ⤢ button opens the same view as a full tab, where **Save page** and
+      ⤢ are hidden and the sidebar and list fill the window.
+- [ ] The save form's **Save**/**Cancel** can never be clipped: the dialog
+      scrolls inside the 600 px panel.
+- [ ] Conflicting note: edit one in Obsidian between loading and saving it from
+      the panel's detail form; the panel shows "This note changed in Obsidian.
+      Reload and try again." and refuses the write until **Reload**.
 
 ## Library (Task 8)
 
@@ -71,7 +79,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] **Move to…** changes the folder on disk.
 - [ ] Delete asks for confirmation and moves the note into
       `.vaultmarks-trash`; the file is gone from its old location.
-- [ ] **New bookmark** writes a correct note into the chosen collection.
+- [ ] **+** (new bookmark) writes a correct note into the chosen collection,
+      with the exact frontmatter shape (`title`, `url`, `created`,
+      `description`, optional `image` / `favicon`, `tags` with `bookmarks`,
+      blank line, cover, description, `[Open original ↗](url)`).
 - [ ] Conflict: open a note in an editor, change one byte, then save from the
       detail panel — the conflict message appears, **Reload** refreshes it,
       and the file on disk is unchanged until you save again.
@@ -84,7 +95,7 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] Load unpacked against `/home/taxin/Documents/notes` and browse
       read-only first: all bookmarks render, covers appear for the notes that
       only have body images, and no file changes.
-- [ ] Save one real bookmark from the popup.
+- [ ] Save one real bookmark from the panel's **Save page**.
 - [ ] In Obsidian, confirm the new note shows title, description, cover,
       favicon and tags, and that `Bookmark Viewer.md` lists it.
 - [ ] Delete that bookmark from the library and confirm it is in

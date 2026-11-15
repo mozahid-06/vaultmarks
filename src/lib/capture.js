@@ -46,6 +46,17 @@ export function normalizeMeta(raw, pageUrl) {
   };
 }
 
+export function savePrefill(meta, { lastCollection = '', selectedCollection = '' } = {}) {
+  return {
+    title: meta.title,
+    url: meta.url,
+    description: meta.description,
+    image: meta.image,
+    favicon: meta.favicon,
+    collection: lastCollection || selectedCollection || '',
+  };
+}
+
 function extractMeta() {
   const meta = (selector) => document.querySelector(selector)?.content ?? '';
   return {

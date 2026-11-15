@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMeta, isSavableUrl } from '../src/lib/capture.js';
+import { normalizeMeta, isSavableUrl, savePrefill } from '../src/lib/capture.js';
 
 test('normalizeMeta resolves images, caps descriptions and falls back to the host', () => {
   const meta = normalizeMeta({
@@ -32,4 +32,17 @@ test('isSavableUrl accepts only http and https', () => {
   assert.equal(isSavableUrl('chrome://settings'), false);
   assert.equal(isSavableUrl('file:///tmp/x'), false);
   assert.equal(isSavableUrl('not a url'), false);
+});
+
+test('savePrefill carries the captured fields and prefers the last-used collection', () => {
+  const meta = {
+    title: 'T', url: 'https://e.com', description: 'D',
+    image: 'https://e.com/i.png', favicon: 'https://e.com/f.ico',
+  };
+  assert.deepEqual(savePrefill(meta, { lastCollection: 'Dev', selectedCollection: '' }), {
+    title: 'T', url: 'https://e.com', description: 'D',
+    image: 'https://e.com/i.png', favicon: 'https://e.com/f.ico', collection: 'Dev',
+  });
+  assert.equal(savePrefill(meta, { lastCollection: '', selectedCollection: 'Dev' }).collection, 'Dev');
+  assert.equal(savePrefill(meta, {}).collection, '');
 });
