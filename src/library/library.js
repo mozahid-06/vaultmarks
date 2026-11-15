@@ -776,9 +776,10 @@ async function renameCollection(node) {
     const parent = dirOf(path);
     if (parent !== '') expanded.add(parent);
     toast(`Moved to ${path}`, 'success');
+    notifyChanged();
     await refresh();
   } catch (error) {
-    toast(error?.message ?? String(error), 'error');
+    toast(messageFor(error), 'error');
     if (error?.code === 'needs-permission') showReconnect();
   }
 }
@@ -791,9 +792,10 @@ async function deleteCollection(node) {
     for (const p of [...expanded]) if (isUnder(p, node.path)) expanded.delete(p);
     if (isUnder(state.collection, node.path)) state.collection = '';
     toast('Collection moved to trash', 'success');
+    notifyChanged();
     await refresh();
   } catch (error) {
-    toast(error?.message ?? String(error), 'error');
+    toast(messageFor(error), 'error');
     if (error?.code === 'needs-permission') showReconnect();
   }
 }

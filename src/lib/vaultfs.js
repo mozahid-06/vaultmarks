@@ -136,6 +136,50 @@ async function entryNames(dirHandle) {
   return names;
 }
 
+function sameBytes(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+async function copyFileInto(handle, targetDir, targetName) {
+  const bytes = new Uint8Array(await (await handle.getFile()).arrayBuffer());
+  const target = await targetDir.getFileHandle(targetName, { create: true });
+  const writable = await target.createWritable();
+  await writable.write(bytes);
+  await writable.close();
+
+  const written = new Uint8Array(await (await target.getFile()).arrayBuffer());
+  if (!sameBytes(written, bytes)) {
+    throw new VaultError('io', 'The copied file did not verify');
+  }
+}
+
+async function copyTree(handle, target) {
+  for await (const [name, entry] of handle.entries()) {
+    if (entry.kind === 'directory') {
+      const sub = await target.getDirectoryHandle(name, { create: true });
+      await copyTree(entry, sub);
+    } else {
+      await copyFileInto(entry, target, name);
+    }
+  }
+}
+
+async function sameEntry(a, b) {
+  if (!a || !b) return false;
+  if (typeof a.isSameEntry === 'function') {
+    try {
+      return await a.isSameEntry(b);
+    } catch {
+      return false;
+    }
+  }
+  return a === b;
+}
+
 async function moveHandle(handle, parent, targetDir, targetName) {
   if (typeof handle.move === 'function') {
     try {
@@ -146,15 +190,7 @@ async function moveHandle(handle, parent, targetDir, targetName) {
     }
   }
 
-  const text = await (await handle.getFile()).text();
-  const target = await targetDir.getFileHandle(targetName, { create: true });
-  const writable = await target.createWritable();
-  await writable.write(text);
-  await writable.close();
-
-  if ((await (await target.getFile()).text()) !== text) {
-    throw new VaultError('io', 'The copied file did not verify');
-  }
+  await copyFileInto(handle, targetDir, targetName);
 
   try {
     await parent.removeEntry(handle.name);
@@ -169,15 +205,18 @@ async function moveDirectoryHandle(handle, parent, targetParent, targetName) {
       await handle.move(targetParent, targetName);
       return;
     } catch {
-      // Fall through to the recursive copy-and-remove path.
+      // Fall through to the recursive copy-then-remove path.
     }
   }
 
   const target = await targetParent.getDirectoryHandle(targetName, { create: true });
-  for await (const [name, entry] of handle.entries()) {
-    if (entry.kind === 'directory') await moveDirectoryHandle(entry, handle, target, name);
-    else await moveHandle(entry, handle, target, name);
+  if (await sameEntry(target, handle)) {
+    throw new VaultError('invalid-name', 'That collection is already in that place');
   }
+
+  // Two-phase: copy and verify the whole tree before removing anything, so a
+  // failure part-way leaves the original collection intact (spec line 89).
+  await copyTree(handle, target);
 
   try {
     await parent.removeEntry(handle.name, { recursive: true });
@@ -331,24 +370,62 @@ export async function createDirectory(name, parent = '') {
   return { path: joinPath(String(parent), trimmed) };
 }
 
+// Walks the destination's parent segments without creating anything and refuses
+// the move if any resolved directory is the source itself. The string checks
+// above are case-sensitive, so on a case-insensitive filesystem a differently
+// cased prefix (e.g. `dev` for `Dev`) only shows up once the handle is resolved.
+async function assertNotInsideSource(root, sourceHandle, dest) {
+  const parents = dest.split('/').slice(0, -1);
+  let handle = root;
+  for (const segment of parents) {
+    if (await sameEntry(handle, sourceHandle)) {
+      throw new VaultError('invalid-name', 'A collection cannot be moved inside itself');
+    }
+    try {
+      handle = await handle.getDirectoryHandle(segment);
+    } catch (error) {
+      if (error?.name === 'NotFoundError') return;
+      throw error;
+    }
+  }
+  if (await sameEntry(handle, sourceHandle)) {
+    throw new VaultError('invalid-name', 'A collection cannot be moved inside itself');
+  }
+}
+
 export async function moveDirectory(path, destination) {
   const root = await requireWritableStore();
   const source = String(path);
-  const dest = String(destination)
+  const segments = String(destination)
     .split('/')
-    .filter((segment) => segment !== '')
-    .map((segment) => assertSegment(segment))
-    .join('/');
+    .filter((segment) => segment !== '');
+  if (segments.some((segment) => segment.startsWith('.'))) {
+    throw new VaultError('invalid-name', 'That collection name is not allowed');
+  }
+  const dest = segments.map((segment) => assertSegment(segment)).join('/');
 
   if (dest === '' || dest === source) throw new VaultError('invalid-name', 'That is the same collection');
   if (dest.startsWith(`${source}/`)) throw new VaultError('invalid-name', 'A collection cannot be moved inside itself');
 
   const sourceParent = await resolveDirectory(root, dirOf(source));
   const sourceHandle = await sourceParent.getDirectoryHandle(baseOf(source));
+  await assertNotInsideSource(root, sourceHandle, dest);
+
   const destParent = await resolveDirectory(root, dirOf(dest), { create: true });
   const name = baseOf(dest);
   const clash = (await entryNames(destParent)).find((entry) => entry.toLowerCase() === name.toLowerCase());
-  if (clash) throw new VaultError('exists', 'A collection with that name already exists');
+  if (clash) {
+    let clashHandle = null;
+    try {
+      clashHandle = await destParent.getDirectoryHandle(clash);
+    } catch {
+      clashHandle = null;
+    }
+    // A case-only rename clashes with itself; let it through.
+    if (!clashHandle || !(await sameEntry(clashHandle, sourceHandle))) {
+      throw new VaultError('exists', 'A collection with that name already exists');
+    }
+  }
 
   await moveDirectoryHandle(sourceHandle, sourceParent, destParent, name);
   return { path: dest };

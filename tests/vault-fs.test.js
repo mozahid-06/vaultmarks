@@ -1,6 +1,6 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 
@@ -11,19 +11,47 @@ import { join, basename } from 'node:path';
 
 const absent = (message) => Object.assign(new Error(message), { name: 'NotFoundError' });
 
+// Test levers. The default fake behaves like a case-sensitive filesystem whose
+// handles all support move(); tests flip these to exercise the copy fallback,
+// a case-insensitive filesystem, or a write that fails part-way.
+let caseInsensitiveLookup = false;
+let allowFileMove = true;
+let failWriteAfter = Infinity;
+let writeAttempts = 0;
+
+async function sameFakePath(a, b) {
+  if (!a || !b) return false;
+  try {
+    return (await realpath(a)) === (await realpath(b));
+  } catch {
+    return a === b;
+  }
+}
+
 class FakeFile {
   constructor(path) {
     this.path = path;
     this.name = basename(path);
     this.kind = 'file';
+    if (!allowFileMove) this.move = undefined;
   }
 
   async getFile() {
-    const [text, info] = await Promise.all([readFile(this.path, 'utf8'), stat(this.path)]);
-    return { name: this.name, text: async () => text, lastModified: info.mtimeMs, size: info.size };
+    const [data, info] = await Promise.all([readFile(this.path), stat(this.path)]);
+    return {
+      name: this.name,
+      text: async () => data.toString('utf8'),
+      arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+      lastModified: info.mtimeMs,
+      size: info.size,
+    };
   }
 
   async createWritable() {
+    writeAttempts += 1;
+    if (writeAttempts > failWriteAfter) {
+      throw Object.assign(new Error('simulated write failure'), { name: 'QuotaExceededError' });
+    }
     let buffer = null;
     const path = this.path;
     return {
@@ -42,6 +70,10 @@ class FakeFile {
     this.path = join(targetDir.path, newName);
     this.name = newName;
   }
+
+  async isSameEntry(other) {
+    return other?.kind === 'file' && sameFakePath(this.path, other.path);
+  }
 }
 
 class FakeDir {
@@ -56,6 +88,10 @@ class FakeDir {
     try {
       if ((await stat(target)).isDirectory()) return new FakeDir(target);
     } catch {
+      if (caseInsensitiveLookup) {
+        const hit = (await readdir(this.path)).find((entry) => entry.toLowerCase() === name.toLowerCase());
+        if (hit && (await stat(join(this.path, hit))).isDirectory()) return new FakeDir(join(this.path, hit));
+      }
       if (!create) throw absent(`${name} is not a directory`);
       await mkdir(target, { recursive: true });
       return new FakeDir(target);
@@ -84,6 +120,10 @@ class FakeDir {
 
   async removeEntry(name) {
     await rm(join(this.path, name), { recursive: true });
+  }
+
+  async isSameEntry(other) {
+    return other?.kind === 'directory' && sameFakePath(this.path, other.path);
   }
 }
 
@@ -337,4 +377,64 @@ test('trashDirectory moves a folder and its nested notes into the hidden trash',
   assert.ok((await readdir(join(moved, 'Js'))).includes('Beta.md'));
   assert.ok(!(await readdir(root)).includes('Dev'));
   assert.equal((await vaultfs.scanStore()).notes.length, 0);
+});
+
+test('moveDirectory refuses a case-variant move into itself on case-insensitive filesystems', async () => {
+  const root = await makeVault({ 'Dev/Alpha.md': ALPHA });
+  caseInsensitiveLookup = true;
+  try {
+    await assert.rejects(() => vaultfs.moveDirectory('Dev', 'dev/Inner'), (e) => e.code === 'invalid-name');
+  } finally {
+    caseInsensitiveLookup = false;
+  }
+  assert.deepEqual(await readdir(root), ['Dev']);
+  assert.deepEqual(await readdir(join(root, 'Dev')), ['Alpha.md']);
+});
+
+test('moveDirectory refuses a case-insensitive collision with a sibling', async () => {
+  await makeVault({ 'Dev/Alpha.md': ALPHA, 'Other/Beta.md': ALPHA });
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', 'other'), (e) => e.code === 'exists');
+});
+
+test('moveDirectory allows a case-only rename of a collection', async () => {
+  const root = await makeVault({ 'Dev/Alpha.md': ALPHA });
+  const { path } = await vaultfs.moveDirectory('Dev', 'dev');
+  assert.equal(path, 'dev');
+  assert.deepEqual(await readdir(root), ['dev']);
+  assert.equal(await readFile(join(root, 'dev/Alpha.md'), 'utf8'), ALPHA);
+});
+
+test('moveDirectory rejects a destination inside a hidden folder', async () => {
+  await makeVault({ 'Dev/Alpha.md': ALPHA });
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', '.trash/Dev'), (e) => e.code === 'invalid-name');
+});
+
+test('moveDirectory copies files byte-for-byte when move() is unavailable', async () => {
+  const root = await makeVault({ 'Dev/Alpha.md': ALPHA });
+  const bytes = Buffer.from([0x00, 0xff, 0xfe, 0x41, 0x80, 0x0a, 0xc3, 0x28]);
+  await writeFile(join(root, 'Dev/blob.bin'), bytes);
+  allowFileMove = false;
+  try {
+    await vaultfs.moveDirectory('Dev', 'Archive/Dev');
+  } finally {
+    allowFileMove = true;
+  }
+  assert.deepEqual(await readFile(join(root, 'Archive/Dev/blob.bin')), bytes);
+  assert.equal(await readFile(join(root, 'Archive/Dev/Alpha.md'), 'utf8'), ALPHA);
+  assert.ok(!(await readdir(root)).includes('Dev'));
+});
+
+test('moveDirectory leaves the source intact when a copy fails part-way', async () => {
+  const root = await makeVault({ 'Dev/A.md': ALPHA, 'Dev/B.md': ALPHA });
+  allowFileMove = false;
+  writeAttempts = 0;
+  failWriteAfter = 1;
+  try {
+    await assert.rejects(() => vaultfs.moveDirectory('Dev', 'Dev2'));
+  } finally {
+    allowFileMove = true;
+    failWriteAfter = Infinity;
+    writeAttempts = 0;
+  }
+  assert.deepEqual((await readdir(join(root, 'Dev'))).sort(), ['A.md', 'B.md']);
 });
