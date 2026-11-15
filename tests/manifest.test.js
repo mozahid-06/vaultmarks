@@ -12,6 +12,11 @@ test('manifest is MV3 with exactly the approved permissions and no worker', () =
   assert.equal(manifest.background, undefined);
 });
 
+test('the action opens the popup page that exists', async () => {
+  assert.equal(manifest.action.default_popup, 'src/popup/popup.html');
+  await readFile(new URL(manifest.action.default_popup, root), 'utf8');
+});
+
 test('every declared icon is a PNG at its declared size', async () => {
   const paths = { ...manifest.icons, ...manifest.action.default_icon };
   for (const [size, path] of Object.entries(paths)) {
