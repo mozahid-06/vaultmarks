@@ -90,9 +90,9 @@ async function refresh() {
   const generation = (state.generation += 1);
   setScanning(true);
   try {
-    const { notes, skipped } = await scanStore();
+    const { notes, skipped, directories } = await scanStore();
     if (generation !== state.generation) return;
-    state.index = buildIndex(notes);
+    state.index = buildIndex(notes, directories);
     state.skipped = skipped;
     showWorkspace();
     renderSidebar();
@@ -715,10 +715,12 @@ function renderSettings() {
 }
 
 async function newCollection() {
-  const name = window.prompt('Collection name');
+  const where = state.collection === '' ? '' : ` in ${state.collection}`;
+  const name = window.prompt(`Collection name${where}`);
   if (name == null) return;
   try {
-    const { path } = await createDirectory(name);
+    const { path } = await createDirectory(name, state.collection);
+    if (state.collection !== '') expanded.add(state.collection);
     expanded.add(path);
     toast(`Created ${path}`, 'success');
     await refresh();

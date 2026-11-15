@@ -163,13 +163,15 @@ async function moveHandle(handle, parent, targetDir, targetName) {
   }
 }
 
-async function collectMarkdown(dirHandle, prefix, out) {
+async function collectMarkdown(dirHandle, prefix, files, directories) {
   for await (const [name, entry] of dirHandle.entries()) {
     if (name.startsWith('.')) continue;
     if (entry.kind === 'directory') {
-      await collectMarkdown(entry, joinPath(prefix, name), out);
+      const path = joinPath(prefix, name);
+      directories.push(path);
+      await collectMarkdown(entry, path, files, directories);
     } else if (entry.kind === 'file' && /\.md$/i.test(name)) {
-      out.push({ key: joinPath(prefix, name), handle: entry });
+      files.push({ key: joinPath(prefix, name), handle: entry });
     }
   }
 }
@@ -177,7 +179,8 @@ async function collectMarkdown(dirHandle, prefix, out) {
 export async function scanStore(onProgress) {
   const root = await requireWritableStore();
   const files = [];
-  await collectMarkdown(root, '', files);
+  const directories = [];
+  await collectMarkdown(root, '', files, directories);
 
   const notes = [];
   let skipped = 0;
@@ -197,7 +200,7 @@ export async function scanStore(onProgress) {
     if (onProgress) onProgress(loaded, files.length);
   });
 
-  return { notes, skipped };
+  return { notes, skipped, directories: directories.sort() };
 }
 
 export async function readFileText(key) {
@@ -268,7 +271,7 @@ export async function trashFile(note) {
   return { trashedAs };
 }
 
-export async function createDirectory(name) {
+export async function createDirectory(name, parent = '') {
   const trimmed = String(name ?? '').trim();
   if (
     trimmed === '' ||
@@ -282,9 +285,10 @@ export async function createDirectory(name) {
   }
 
   const root = await requireWritableStore();
-  const existing = (await entryNames(root)).filter((entry) => entry.toLowerCase() === trimmed.toLowerCase());
+  const parentDir = await resolveDirectory(root, String(parent));
+  const existing = (await entryNames(parentDir)).filter((entry) => entry.toLowerCase() === trimmed.toLowerCase());
   if (existing.length > 0) throw new VaultError('exists', 'A collection with that name already exists');
 
-  await root.getDirectoryHandle(trimmed, { create: true });
-  return { path: trimmed };
+  await parentDir.getDirectoryHandle(trimmed, { create: true });
+  return { path: joinPath(String(parent), trimmed) };
 }

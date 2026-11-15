@@ -24,6 +24,22 @@ test('buildIndex builds a nested tree with descendant counts', () => {
   assert.deepEqual(dev.children.map((c) => [c.path, c.count]), [['Development/Learning', 1]]);
 });
 
+test('buildIndex includes empty and directory-only collections from the scan', () => {
+  const index = buildIndex(notes, ['Design', 'Development', 'Development/Learning', 'Empty', 'Empty/Deep']);
+  assert.deepEqual(index.collections.map((c) => c.path), ['Design', 'Development', 'Empty']);
+  const empty = index.collections.find((c) => c.path === 'Empty');
+  assert.equal(empty.count, 0);
+  assert.deepEqual(empty.children.map((c) => c.path), ['Empty/Deep']);
+  assert.equal(empty.children[0].count, 0);
+});
+
+test('buildIndex synthesizes ancestor directories that were not listed', () => {
+  const index = buildIndex([], ['A/B/C']);
+  assert.deepEqual(index.collections.map((c) => c.path), ['A']);
+  assert.deepEqual(index.collections[0].children.map((c) => c.path), ['A/B']);
+  assert.deepEqual(index.collections[0].children[0].children.map((c) => c.path), ['A/B/C']);
+});
+
 test('tags exclude the base tag and are sorted by count then name', () => {
   const index = buildIndex(notes);
   assert.deepEqual(index.tags, [{ name: 'design', count: 1 }, { name: 'frontend', count: 1 }]);

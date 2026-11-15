@@ -38,7 +38,7 @@ function sortTree(nodes) {
   return nodes;
 }
 
-export function buildIndex(notes) {
+export function buildIndex(notes, directories = []) {
   const ordered = sortNewest(notes);
   const byKey = new Map();
   const byUrl = new Map();
@@ -52,8 +52,9 @@ export function buildIndex(notes) {
   }
 
   const paths = new Set();
-  for (const dir of dirCounts.keys()) {
-    const parts = dir.split('/');
+  for (const dir of [...dirCounts.keys(), ...directories]) {
+    if (dir === '' || dir == null) continue;
+    const parts = String(dir).split('/');
     for (let i = 1; i <= parts.length; i += 1) paths.add(parts.slice(0, i).join('/'));
   }
 

@@ -57,6 +57,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       and after.
 - [ ] Create a collection with **+** and confirm the folder appears on disk
       and in the sidebar. Creating it again toasts the "already exists" error.
+- [ ] With a collection selected, **+** creates a child inside it; with **All
+      bookmarks** selected it creates at the store root.
+- [ ] A folder that contains no notes still shows in the sidebar and in the
+      new-bookmark collection dropdown.
 
 ## Permission loss (Task 8)
 

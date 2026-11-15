@@ -190,6 +190,25 @@ test('scanStore lists markdown notes, skips dot directories and non-md files', a
   assert.deepEqual(notes.map((note) => note.key).sort(), ['Alpha.md', 'Dev/Beta.md']);
 });
 
+test('scanStore also returns every non-hidden directory, including empty ones', async () => {
+  const root = await makeVault({ 'Dev/Beta.md': ALPHA.replace('Alpha', 'Beta') });
+  await mkdir(join(root, 'Empty'));
+  await mkdir(join(root, 'Dev/Nested'));
+  await mkdir(join(root, '.hidden'));
+  const { directories } = await vaultfs.scanStore();
+  assert.deepEqual(directories, ['Dev', 'Dev/Nested', 'Empty']);
+});
+
+test('createDirectory creates a nested collection under a parent', async () => {
+  const root = await makeVault({});
+  await vaultfs.createDirectory('Dev');
+  const { path } = await vaultfs.createDirectory('Js', 'Dev');
+  assert.equal(path, 'Dev/Js');
+  assert.ok((await readdir(join(root, 'Dev'))).includes('Js'));
+  await assert.rejects(() => vaultfs.createDirectory('Js', 'Dev'), (error) => error.code === 'exists');
+  await assert.rejects(() => vaultfs.createDirectory('bad/name', 'Dev'), (error) => error.code === 'invalid-name');
+});
+
 test('writeNewFile creates a note and de-duplicates the filename', async () => {
   const root = await makeVault();
   const text = createNoteText({

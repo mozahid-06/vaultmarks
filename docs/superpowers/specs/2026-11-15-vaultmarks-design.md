@@ -285,9 +285,11 @@ Raindrop screenshot the user approved, minus the clutter:
   bulk-action bar.
 - Selecting a collection filters to it and its subfolders. Selecting
   **All bookmarks** clears it.
-- The Collections header has a single **+** that creates a folder at the store
-  root (validated name, collisions rejected). Nested folders are made in
-  Obsidian; **Move to…** lists every folder.
+- The Collections header has a single **+** that creates a folder inside the
+  currently selected collection, or at the store root when **All bookmarks** is
+  active (validated name, collisions rejected). The sidebar lists every folder,
+  including empty ones; nested folders made in Obsidian also appear. **Move to…**
+  lists every folder.
 - Detail panel (modal `<dialog>`): cover if present, title, URL, description,
   created, tag chips, collection; actions Open, Copy link, Edit, Move to…,
   Delete (confirm), Open in Obsidian. Edit toggles the panel into fields with
