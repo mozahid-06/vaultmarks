@@ -300,3 +300,29 @@ test('createDirectory validates names and refuses duplicates case-insensitively'
   await assert.rejects(() => vaultfs.createDirectory('bad/name'), (error) => error.code === 'invalid-name');
   await assert.rejects(() => vaultfs.createDirectory('   '), (error) => error.code === 'invalid-name');
 });
+
+test('moveDirectory renames a folder in place, keeping notes byte-identical', async () => {
+  const root = await makeVault({ 'Dev/Js/Alpha.md': ALPHA });
+  const before = await readFile(join(root, 'Dev/Js/Alpha.md'), 'utf8');
+  const { path } = await vaultfs.moveDirectory('Dev/Js', 'Dev/Web');
+  assert.equal(path, 'Dev/Web');
+  assert.ok((await readdir(join(root, 'Dev'))).includes('Web'));
+  assert.ok(!(await readdir(join(root, 'Dev'))).includes('Js'));
+  assert.equal(await readFile(join(root, 'Dev/Web/Alpha.md'), 'utf8'), before);
+});
+
+test('moveDirectory relocates a folder and creates missing parents', async () => {
+  const root = await makeVault({ 'Dev/Alpha.md': ALPHA });
+  await vaultfs.moveDirectory('Dev', 'Archive/Dev');
+  assert.ok((await readdir(join(root, 'Archive'))).includes('Dev'));
+  assert.ok(!(await readdir(root)).includes('Dev'));
+  assert.equal((await vaultfs.scanStore()).notes[0].key, 'Archive/Dev/Alpha.md');
+});
+
+test('moveDirectory refuses a collision, a self-move and a descendant move', async () => {
+  await makeVault({ 'Dev/Alpha.md': ALPHA, 'Other/Beta.md': ALPHA });
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', 'Other'), (e) => e.code === 'exists');
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', 'Dev'), (e) => e.code === 'invalid-name');
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', 'Dev/Inner'), (e) => e.code === 'invalid-name');
+  await assert.rejects(() => vaultfs.moveDirectory('Dev', 'bad/../name'), (e) => e.code === 'invalid-name');
+});

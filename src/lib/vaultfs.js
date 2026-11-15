@@ -163,6 +163,29 @@ async function moveHandle(handle, parent, targetDir, targetName) {
   }
 }
 
+async function moveDirectoryHandle(handle, parent, targetParent, targetName) {
+  if (typeof handle.move === 'function') {
+    try {
+      await handle.move(targetParent, targetName);
+      return;
+    } catch {
+      // Fall through to the recursive copy-and-remove path.
+    }
+  }
+
+  const target = await targetParent.getDirectoryHandle(targetName, { create: true });
+  for await (const [name, entry] of handle.entries()) {
+    if (entry.kind === 'directory') await moveDirectoryHandle(entry, handle, target, name);
+    else await moveHandle(entry, handle, target, name);
+  }
+
+  try {
+    await parent.removeEntry(handle.name, { recursive: true });
+  } catch {
+    throw new VaultError('partial', `Copied to ${targetName}, but the original folder could not be removed`);
+  }
+}
+
 async function collectMarkdown(dirHandle, prefix, files, directories) {
   for await (const [name, entry] of dirHandle.entries()) {
     if (name.startsWith('.')) continue;
@@ -271,7 +294,7 @@ export async function trashFile(note) {
   return { trashedAs };
 }
 
-export async function createDirectory(name, parent = '') {
+function assertSegment(name) {
   const trimmed = String(name ?? '').trim();
   if (
     trimmed === '' ||
@@ -283,7 +306,11 @@ export async function createDirectory(name, parent = '') {
   ) {
     throw new VaultError('invalid-name', 'That collection name is not allowed');
   }
+  return trimmed;
+}
 
+export async function createDirectory(name, parent = '') {
+  const trimmed = assertSegment(name);
   const root = await requireWritableStore();
   const parentDir = await resolveDirectory(root, String(parent));
   const existing = (await entryNames(parentDir)).filter((entry) => entry.toLowerCase() === trimmed.toLowerCase());
@@ -291,4 +318,27 @@ export async function createDirectory(name, parent = '') {
 
   await parentDir.getDirectoryHandle(trimmed, { create: true });
   return { path: joinPath(String(parent), trimmed) };
+}
+
+export async function moveDirectory(path, destination) {
+  const root = await requireWritableStore();
+  const source = String(path);
+  const dest = String(destination)
+    .split('/')
+    .filter((segment) => segment !== '')
+    .map((segment) => assertSegment(segment))
+    .join('/');
+
+  if (dest === '' || dest === source) throw new VaultError('invalid-name', 'That is the same collection');
+  if (dest.startsWith(`${source}/`)) throw new VaultError('invalid-name', 'A collection cannot be moved inside itself');
+
+  const sourceParent = await resolveDirectory(root, dirOf(source));
+  const sourceHandle = await sourceParent.getDirectoryHandle(baseOf(source));
+  const destParent = await resolveDirectory(root, dirOf(dest), { create: true });
+  const name = baseOf(dest);
+  const clash = (await entryNames(destParent)).find((entry) => entry.toLowerCase() === name.toLowerCase());
+  if (clash) throw new VaultError('exists', 'A collection with that name already exists');
+
+  await moveDirectoryHandle(sourceHandle, sourceParent, destParent, name);
+  return { path: dest };
 }
