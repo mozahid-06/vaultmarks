@@ -326,3 +326,15 @@ test('moveDirectory refuses a collision, a self-move and a descendant move', asy
   await assert.rejects(() => vaultfs.moveDirectory('Dev', 'Dev/Inner'), (e) => e.code === 'invalid-name');
   await assert.rejects(() => vaultfs.moveDirectory('Dev', 'bad/../name'), (e) => e.code === 'invalid-name');
 });
+
+test('trashDirectory moves a folder and its nested notes into the hidden trash', async () => {
+  const root = await makeVault({ 'Dev/Alpha.md': ALPHA, 'Dev/Js/Beta.md': ALPHA });
+  const { trashedAs } = await vaultfs.trashDirectory('Dev');
+  assert.match(basename(trashedAs), /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z--Dev$/);
+  assert.deepEqual(await readdir(join(root, '.vaultmarks-trash')), [trashedAs]);
+  const moved = join(root, '.vaultmarks-trash', trashedAs);
+  assert.ok((await readdir(moved)).includes('Alpha.md'));
+  assert.ok((await readdir(join(moved, 'Js'))).includes('Beta.md'));
+  assert.ok(!(await readdir(root)).includes('Dev'));
+  assert.equal((await vaultfs.scanStore()).notes.length, 0);
+});

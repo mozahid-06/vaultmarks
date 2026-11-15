@@ -294,6 +294,17 @@ export async function trashFile(note) {
   return { trashedAs };
 }
 
+export async function trashDirectory(path) {
+  const root = await requireWritableStore();
+  const parent = await resolveDirectory(root, dirOf(path));
+  const handle = await parent.getDirectoryHandle(baseOf(path));
+  const trashDir = await root.getDirectoryHandle(TRASH_DIR, { create: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const trashedAs = `${stamp}--${baseOf(path)}`;
+  await moveDirectoryHandle(handle, parent, trashDir, trashedAs);
+  return { trashedAs };
+}
+
 function assertSegment(name) {
   const trimmed = String(name ?? '').trim();
   if (
