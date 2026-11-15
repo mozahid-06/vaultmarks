@@ -5,17 +5,8 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 
-test('popup has no inline script or handlers and the wiring ids exist', async () => {
-  const html = await read('src/popup/popup.html');
-  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i);
-  assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
-  for (const id of ['setup', 'form', 'cover', 'title', 'url', 'description', 'tags', 'collection', 'save', 'status']) {
-    assert.match(html, new RegExp(`id="${id}"`));
-  }
-});
-
 test('the stylesheets keep the hidden attribute authoritative', async () => {
-  for (const path of ['src/popup/popup.css', 'src/library/library.css']) {
+  for (const path of ['src/library/library.css']) {
     const css = await read(path);
     assert.match(css, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/i, `${path} must force [hidden] { display: none !important }`);
   }

@@ -5,10 +5,12 @@ Markdown note in your Obsidian vault. No server, no helper process, no
 account: the extension talks to the folder you pick, and Obsidian shows the
 full details of every bookmark.
 
-- **Popup** — capture the page you are on (title, URL, description, cover,
-  favicon, tags) and save it into a collection.
-- **Library** — a full tab with a compact list: cover thumbnail, title,
-  two-line description, `domain · date`, plus search and a collection tree.
+- **Panel** — the toolbar icon opens a two-pane panel: a collections sidebar
+  and the bookmark list with search, sized for a Chromium popup (780×600).
+  **Save page** captures the page you are on (title, URL, description, cover,
+  favicon, tags).
+- **Tab** — the ⤢ button opens the same page as a full-width tab; the panel
+  and the tab are one codebase and one dataset, so they can never drift.
 - **Surgical writes** — editing a bookmark patches only the keys it owns and
   leaves the rest of the note (comments, unknown keys, body, line endings,
   BOM) exactly as Obsidian wrote it.
@@ -28,27 +30,30 @@ full details of every bookmark.
 
 ## First run
 
-Click the toolbar icon or open the library (the toolbar icon's popup has an
-**Open library** button). In the library, click **Choose your Obsidian vault
-folder** and pick your vault root (for example `~/Documents/notes`). The
-grant covers reading and writing inside that folder only.
+On first run the panel shows **Choose your Obsidian vault folder**; clicking it
+opens the library tab, where you pick your vault root (for example
+`~/Documents/notes`). The picker runs in a tab because a folder-permission
+prompt can otherwise close the popup. The grant covers reading and writing
+inside that folder only.
 
 Chromium forgets folder permissions when it restarts. On the next launch the
-library shows a **Reconnect folder** banner: one click re-grants access, and
+panel shows a **Reconnect folder** banner: one click re-grants access, and
 the bookmark list is rebuilt.
 
 ## Usage
 
-**Popup.** Open the toolbar popup on a normal web page. The title,
-description and cover are pre-filled; adjust them, add tags, pick a
-collection, and press **Save** (or <kbd>Ctrl/Cmd</kbd>+<kbd>Enter</kbd>). If
-the URL is already saved, Vaultmarks says where it lives and offers **Open**
-or **Save anyway**. After saving you can open the library, open the note in
-Obsidian, or save another page.
+**Save page.** On a normal web page, click the toolbar icon and press
+**Save page**. The title, description and cover are pre-filled, and the
+collection defaults to the last one you used; adjust them, add tags and pick a
+collection, then press **Save**. If the URL is already saved, Vaultmarks says
+where it lives and offers **Open** or **Save anyway**. The note then appears in
+the list, and its detail view offers **Open in Obsidian**.
 
-**Library.** Type in the search box (or press <kbd>/</kbd>) to filter by
-title, description, URL, domain or tags; <kbd>Esc</kbd> clears it. Click a
-collection in the sidebar to filter by folder. Hover a row for three actions:
+**Panel and tab.** The panel and the full tab (opened with ⤢) are the same page:
+search, list and detail are identical. Type in the search box (or press
+<kbd>/</kbd>) to filter by title, description, URL, domain or tags;
+<kbd>Esc</kbd> clears it. Click a collection in the sidebar to filter by folder.
+Hover a row for three actions:
 
 - 👁 **Details** — cover, title, URL, description, date, tags and collection,
   with **Open**, **Copy link**, **Edit**, **Move to…**, **Delete**,
@@ -58,12 +63,12 @@ collection in the sidebar to filter by folder. Hover a row for three actions:
 - 🗑 **Delete** — moves the note to the hidden `.vaultmarks-trash` folder
   inside the store; nothing is hard-deleted.
 
-**New bookmark** (top right) creates a note by hand. **+** next to
+**+ New** (top of the list) creates a note by hand. **+** next to
 *Collections* creates a folder at the store root. Collections are plain
 folders, so nested collections are made in Obsidian and show up here.
 
-**Settings** (gear) shows the store folder, how many notes were skipped, the
-version, and **Rescan** / **Change folder**.
+**Settings** (gear, sidebar header) shows the store folder, how many notes were
+skipped, the version, and **Rescan** / **Change folder**.
 
 ### Conflicts
 
@@ -115,7 +120,7 @@ Lightweight, self-hosted Bitwarden-compatible password manager server.
 
 | Permission | Why |
 | --- | --- |
-| `activeTab` + `scripting` | Read the title, description, image and favicon of the page you are on, only when you open the popup. |
+| `activeTab` + `scripting` | Read the title, description, image and favicon of the page you are on, only when you press **Save page** in the panel. |
 | `favicon` | Show site icons from Chromium's cache for notes that have no cover. |
 | `storage` | Remember the folder handle and small settings (last collection, store label). |
 

@@ -12,8 +12,8 @@ test('manifest is MV3 with exactly the approved permissions and no worker', () =
   assert.equal(manifest.background, undefined);
 });
 
-test('the action opens the popup page that exists', async () => {
-  assert.equal(manifest.action.default_popup, 'src/popup/popup.html');
+test('the action opens the panel page that exists', async () => {
+  assert.equal(manifest.action.default_popup, 'src/library/library.html');
   await readFile(new URL(manifest.action.default_popup, root), 'utf8');
 });
 
