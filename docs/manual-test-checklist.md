@@ -61,6 +61,12 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       bookmarks** selected it creates at the store root.
 - [ ] A folder that contains no notes still shows in the sidebar and in the
       new-bookmark collection dropdown.
+- [ ] Rename a collection (hover → pencil): the folder and its notes move on disk
+      and the sidebar selection follows.
+- [ ] Move a collection by typing a new path (e.g. `Archive/Dev`): parents are
+      created and the notes travel with it.
+- [ ] Delete a collection with notes (hover → trash): it lands in
+      `.vaultmarks-trash/` and disappears from the sidebar and the dropdown.
 
 ## Permission loss (Task 8)
 

@@ -199,6 +199,34 @@ button.primary {
   gap: 2px;
 }
 
+.collection-row .nav-item {
+  width: auto;
+  flex: 1;
+}
+
+.collection-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.collection-row:hover .collection-actions,
+.collection-row:focus-within .collection-actions {
+  opacity: 1;
+}
+
+.collection-actions button {
+  padding: 4px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.collection-actions button:hover {
+  color: var(--fg);
+  background: var(--surface);
+}
+
 .disclosure,
 .disclosure-spacer {
   display: inline-flex;

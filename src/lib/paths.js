@@ -11,3 +11,11 @@ export function baseOf(key) {
   const slash = String(key).lastIndexOf('/');
   return slash === -1 ? String(key) : String(key).slice(slash + 1);
 }
+
+export function isUnder(path, prefix) {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
+export function remapPath(path, from, to) {
+  return isUnder(path, from) ? to + path.slice(from.length) : path;
+}

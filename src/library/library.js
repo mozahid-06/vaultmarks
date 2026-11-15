@@ -7,6 +7,8 @@ import {
   clearStoredStore,
   scanStore,
   createDirectory,
+  moveDirectory,
+  trashDirectory,
   updateFile,
   moveFile,
   trashFile,
@@ -14,7 +16,7 @@ import {
 } from '../lib/vaultfs.js';
 import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
 import { createNoteText, filenameBase } from '../lib/markdown.js';
-import { dirOf, baseOf } from '../lib/paths.js';
+import { dirOf, baseOf, isUnder, remapPath } from '../lib/paths.js';
 import { isSavableUrl, savePrefill, captureActiveTab } from '../lib/capture.js';
 import { isTabView } from '../lib/view.js';
 import {
@@ -176,6 +178,30 @@ function renderNodes(nodes, depth) {
           active: state.collection === node.path,
           onClick: () => selectCollection(node.path),
         }),
+        h(
+          'div',
+          { className: 'collection-actions' },
+          h(
+            'button',
+            {
+              type: 'button',
+              'aria-label': `Rename ${node.name}`,
+              title: 'Rename or move',
+              onclick: () => renameCollection(node),
+            },
+            icon('pencil'),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              'aria-label': `Delete ${node.name}`,
+              title: 'Delete',
+              onclick: () => deleteCollection(node),
+            },
+            icon('trash'),
+          ),
+        ),
       ),
       hasChildren && isOpen
         ? h('div', { className: 'collection-children' }, ...renderNodes(node.children, depth + 1))
@@ -731,6 +757,43 @@ async function newCollection() {
       'needs-permission': 'Vaultmarks lost access to your vault folder.',
     };
     toast(messages[error?.code] ?? error?.message ?? String(error), 'error');
+    if (error?.code === 'needs-permission') showReconnect();
+  }
+}
+
+async function renameCollection(node) {
+  const entered = window.prompt('Collection path', node.path);
+  if (entered == null || entered.trim() === '' || entered.trim() === node.path) return;
+  try {
+    const { path } = await moveDirectory(node.path, entered);
+    if (isUnder(state.collection, node.path)) state.collection = remapPath(state.collection, node.path, path);
+    for (const p of [...expanded]) {
+      if (isUnder(p, node.path)) {
+        expanded.delete(p);
+        expanded.add(remapPath(p, node.path, path));
+      }
+    }
+    const parent = dirOf(path);
+    if (parent !== '') expanded.add(parent);
+    toast(`Moved to ${path}`, 'success');
+    await refresh();
+  } catch (error) {
+    toast(error?.message ?? String(error), 'error');
+    if (error?.code === 'needs-permission') showReconnect();
+  }
+}
+
+async function deleteCollection(node) {
+  const noun = node.count === 1 ? 'bookmark' : 'bookmarks';
+  if (!window.confirm(`Move "${node.name}" and its ${node.count} ${noun} to trash?`)) return;
+  try {
+    await trashDirectory(node.path);
+    for (const p of [...expanded]) if (isUnder(p, node.path)) expanded.delete(p);
+    if (isUnder(state.collection, node.path)) state.collection = '';
+    toast('Collection moved to trash', 'success');
+    await refresh();
+  } catch (error) {
+    toast(error?.message ?? String(error), 'error');
     if (error?.code === 'needs-permission') showReconnect();
   }
 }
