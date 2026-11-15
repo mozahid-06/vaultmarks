@@ -562,5 +562,19 @@ html.panel .sidebar {
 
 html.panel .main {
   height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+html.panel .main-toolbar,
+html.panel .main-head,
+html.panel .banner {
+  flex: none;
+}
+
+html.panel #list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }

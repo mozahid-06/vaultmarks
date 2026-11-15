@@ -114,7 +114,7 @@ export function filterNotes(index, { collection = '', query = '' } = {}) {
 
 export function findByUrl(index, url) {
   const normalized = normalizeUrl(url);
-  return (normalized !== '' && index.byUrl.get(normalized)) || null;
+  return (normalized !== '' && index?.byUrl.get(normalized)) || null;
 }
 
 export function formatDate(created, now = new Date()) {

@@ -103,7 +103,10 @@ async function refresh() {
     else if (error?.code === 'no-store' || error?.name === 'NotFoundError') await forgetStore();
     else toast(error?.message ?? String(error), 'error');
   } finally {
-    if (generation === state.generation) setScanning(false);
+    if (generation === state.generation) {
+      setScanning(false);
+      if (state.index) renderList();
+    }
   }
 }
 
@@ -440,6 +443,10 @@ async function onSavePage() {
     return;
   }
   await ensureIndex();
+  if (!state.index) {
+    toast('Reconnect the vault folder first.', 'error');
+    return;
+  }
   openCreate(savePrefill(meta, {
     lastCollection: state.settings?.lastCollection ?? '',
     selectedCollection: state.collection,
@@ -542,6 +549,10 @@ async function onDetailSubmit(event) {
   el('detail-save').disabled = true;
   try {
     if (state.mode === 'create' || state.mode === 'save') {
+      if (!state.index) {
+        setDetailStatus('Reconnect the vault folder first.');
+        return;
+      }
       const existing = findByUrl(state.index, url);
       if (existing && !state.saveAnyway) {
         showDuplicate(existing);
@@ -823,6 +834,9 @@ async function init() {
     return;
   }
 
+  // Reveal the chrome before the scan so the panel is never a blank box; the
+  // summary shows "Scanning..." and the wordmark animates until the list lands.
+  showWorkspace();
   await refresh();
 }
 

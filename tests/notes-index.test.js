@@ -49,6 +49,11 @@ test('URL helpers normalize, display and find duplicates', () => {
   assert.equal(findByUrl(index, 'https://react.dev/').title, 'React');
 });
 
+test('findByUrl tolerates a missing index (no scan yet)', () => {
+  assert.equal(findByUrl(null, 'https://example.com/x'), null);
+  assert.equal(findByUrl(undefined, 'https://example.com/x'), null);
+});
+
 test('formatDate omits the current year', () => {
   const now = new Date(2026, 10, 15);
   assert.equal(formatDate('2026-06-16', now), 'Jun 16');

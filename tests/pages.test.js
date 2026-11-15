@@ -33,3 +33,9 @@ test('the library page is the panel by default and has the panel wiring', async 
     assert.match(html, new RegExp(`id="${id}"`));
   }
 });
+
+test('the panel pins its chrome and scrolls only the list', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /html\.panel \.main\s*\{[^}]*overflow:\s*hidden/i);
+  assert.match(css, /html\.panel #list\s*\{[^}]*overflow-y:\s*auto/i);
+});
