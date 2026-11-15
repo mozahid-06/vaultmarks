@@ -61,6 +61,7 @@ function showOnboarding(message) {
 function showReconnect() {
   el('reconnect').hidden = false;
   el('onboarding').hidden = true;
+  el('workspace').hidden = false;
 }
 
 function showWorkspace() {

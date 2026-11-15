@@ -88,9 +88,17 @@ export function toast(message, kind = 'info') {
   return node;
 }
 
+const tagInputs = new WeakMap();
+
 export function createTagInput({ input, chips, initial = [], suggestions = [], exclude = [] }) {
+  // Re-wiring the same input must not stack listeners: a stale instance would
+  // consume the keystroke first and drop the tag. Abort the previous one.
+  tagInputs.get(input)?.dispose();
+
   const tags = [];
   const excluded = new Set(exclude.map((tag) => tag.toLowerCase()));
+  const controller = new AbortController();
+  const { signal } = controller;
 
   const render = () => {
     chips.replaceChildren(
@@ -137,26 +145,44 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
   (input.parentElement ?? document.body).append(datalist);
   input.setAttribute('list', datalist.id);
 
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      add(input.value);
-      input.value = '';
-    } else if (event.key === 'Backspace' && input.value === '' && tags.length > 0) {
-      remove(tags.length - 1);
-    }
-  });
-  input.addEventListener('blur', () => {
-    if (input.value.trim() !== '') {
-      add(input.value);
-      input.value = '';
-    }
-  });
+  input.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        add(input.value);
+        input.value = '';
+      } else if (event.key === 'Backspace' && input.value === '' && tags.length > 0) {
+        remove(tags.length - 1);
+      }
+    },
+    { signal },
+  );
+  input.addEventListener(
+    'blur',
+    () => {
+      if (input.value.trim() !== '') {
+        add(input.value);
+        input.value = '';
+      }
+    },
+    { signal },
+  );
 
   for (const tag of initial) add(tag);
   render();
 
-  return { getTags: () => [...tags] };
+  const handle = {
+    getTags: () => [...tags],
+    setTags: (next) => {
+      tags.length = 0;
+      for (const tag of next ?? []) add(tag);
+      render();
+    },
+    dispose: () => controller.abort(),
+  };
+  tagInputs.set(input, handle);
+  return handle;
 }
 
 export function collectionOptions(index) {

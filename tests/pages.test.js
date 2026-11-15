@@ -14,6 +14,13 @@ test('popup has no inline script or handlers and the wiring ids exist', async ()
   }
 });
 
+test('the stylesheets keep the hidden attribute authoritative', async () => {
+  for (const path of ['src/popup/popup.css', 'src/library/library.css']) {
+    const css = await read(path);
+    assert.match(css, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/i, `${path} must force [hidden] { display: none !important }`);
+  }
+});
+
 test('library has no inline script or handlers and the wiring ids exist', async () => {
   const html = await read('src/library/library.html');
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i);

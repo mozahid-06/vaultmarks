@@ -1,0 +1,283 @@
+import { test, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, basename } from 'node:path';
+
+// Runs the real src/lib/vaultfs.js against a Node-backed fake of the File
+// System Access API and a throwaway vault on disk. This is the only place
+// the destructive write paths (create, patch, rename, move, trash) run
+// end-to-end.
+
+const absent = (message) => Object.assign(new Error(message), { name: 'NotFoundError' });
+
+class FakeFile {
+  constructor(path) {
+    this.path = path;
+    this.name = basename(path);
+    this.kind = 'file';
+  }
+
+  async getFile() {
+    const [text, info] = await Promise.all([readFile(this.path, 'utf8'), stat(this.path)]);
+    return { name: this.name, text: async () => text, lastModified: info.mtimeMs, size: info.size };
+  }
+
+  async createWritable() {
+    let buffer = null;
+    const path = this.path;
+    return {
+      async write(data) {
+        buffer = data;
+      },
+      async close() {
+        await writeFile(path, buffer ?? '');
+        buffer = null;
+      },
+    };
+  }
+
+  async move(targetDir, newName) {
+    await rename(this.path, join(targetDir.path, newName));
+    this.path = join(targetDir.path, newName);
+    this.name = newName;
+  }
+}
+
+class FakeDir {
+  constructor(path) {
+    this.path = path;
+    this.name = basename(path);
+    this.kind = 'directory';
+  }
+
+  async getDirectoryHandle(name, { create = false } = {}) {
+    const target = join(this.path, name);
+    try {
+      if ((await stat(target)).isDirectory()) return new FakeDir(target);
+    } catch {
+      if (!create) throw absent(`${name} is not a directory`);
+      await mkdir(target, { recursive: true });
+      return new FakeDir(target);
+    }
+    throw new Error(`${name} exists and is not a directory`);
+  }
+
+  async getFileHandle(name, { create = false } = {}) {
+    const target = join(this.path, name);
+    try {
+      if ((await stat(target)).isFile()) return new FakeFile(target);
+    } catch {
+      if (!create) throw absent(`${name} is not a file`);
+      await writeFile(target, '');
+      return new FakeFile(target);
+    }
+    throw new Error(`${name} exists and is not a file`);
+  }
+
+  async *entries() {
+    for (const entry of await readdir(this.path, { withFileTypes: true })) {
+      const target = join(this.path, entry.name);
+      yield [entry.name, entry.isDirectory() ? new FakeDir(target) : new FakeFile(target)];
+    }
+  }
+
+  async removeEntry(name) {
+    await rm(join(this.path, name), { recursive: true });
+  }
+}
+
+function makeRequest(result) {
+  const request = {};
+  queueMicrotask(() => {
+    request.result = result;
+    request.onsuccess?.();
+  });
+  return request;
+}
+
+let currentHandle = null;
+
+globalThis.indexedDB = {
+  open() {
+    const request = {};
+    queueMicrotask(() => {
+      request.result = {
+        objectStoreNames: { contains: () => true },
+        transaction: () => {
+          const tx = {};
+          tx.objectStore = () => ({
+            get: () => makeRequest(currentHandle),
+            put: () => makeRequest(undefined),
+            delete: () => makeRequest(undefined),
+          });
+          setTimeout(() => tx.oncomplete?.(), 0);
+          return tx;
+        },
+        close() {},
+      };
+      request.onsuccess?.();
+    });
+    return request;
+  },
+};
+
+const vaultfs = await import('../src/lib/vaultfs.js');
+const { createNoteText } = await import('../src/lib/markdown.js');
+
+const roots = [];
+
+async function makeVault(files = {}) {
+  const root = await mkdtemp(join(tmpdir(), 'vaultmarks-fs-'));
+  roots.push(root);
+  for (const [path, content] of Object.entries(files)) {
+    const full = join(root, path);
+    await mkdir(join(full, '..'), { recursive: true });
+    await writeFile(full, content);
+  }
+  currentHandle = new FakeDir(root);
+  return root;
+}
+
+after(async () => {
+  for (const root of roots) await rm(root, { recursive: true, force: true });
+});
+
+const ALPHA = [
+  '---',
+  'title: "Alpha"',
+  'url: "https://alpha.example"',
+  'created: 2026-01-02',
+  'description: "First"',
+  '# keep me',
+  'custom: keep',
+  'tags:',
+  '  - "bookmarks"',
+  '---',
+  '',
+  '![](https://alpha.example/c.png)',
+  '',
+  'Body line.',
+  '',
+  '[Open original ↗](https://alpha.example)',
+  '',
+].join('\n');
+
+const CRLF_BETA = [
+  '---',
+  'title: "Beta"',
+  'url: "https://beta.example"',
+  'description: "Second"',
+  '# note',
+  'custom: yes',
+  'tags:',
+  '  - "bookmarks"',
+  '---',
+  '',
+  'Beta body.',
+  '',
+].join('\r\n');
+
+test('scanStore lists markdown notes, skips dot directories and non-md files', async () => {
+  await makeVault({
+    'Alpha.md': ALPHA,
+    'Dev/Beta.md': ALPHA.replace('Alpha', 'Beta'),
+    'Dev/readme.txt': 'not a note',
+    '.vaultmarks-trash/old.md': '---\nurl: "https://x.example"\n---\n',
+  });
+  const { notes, skipped } = await vaultfs.scanStore();
+  assert.equal(skipped, 0);
+  assert.deepEqual(notes.map((note) => note.key).sort(), ['Alpha.md', 'Dev/Beta.md']);
+});
+
+test('writeNewFile creates a note and de-duplicates the filename', async () => {
+  const root = await makeVault();
+  const text = createNoteText({
+    title: 'Smoke',
+    url: 'https://example.com/s',
+    created: '2026-11-15',
+    description: 'd',
+    image: '',
+    favicon: '',
+    tags: ['bookmarks'],
+  });
+  assert.equal((await vaultfs.writeNewFile('', 'Smoke', text)).key, 'Smoke.md');
+  assert.equal((await vaultfs.writeNewFile('', 'Smoke', text)).key, 'Smoke (2).md');
+  assert.deepEqual((await readdir(root)).sort(), ['Smoke (2).md', 'Smoke.md']);
+});
+
+test('updateFile patches frontmatter, renames on title change and keeps the body and other keys', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  let { notes } = await vaultfs.scanStore();
+
+  assert.equal((await vaultfs.updateFile(notes[0], { description: 'Changed' })).key, 'Alpha.md');
+  const text = await readFile(join(root, 'Alpha.md'), 'utf8');
+  assert.match(text, /description: "Changed"/);
+  assert.match(text, /# keep me/);
+  assert.match(text, /custom: keep/);
+  assert.ok(text.includes('![](https://alpha.example/c.png)'));
+  assert.ok(text.endsWith('[Open original ↗](https://alpha.example)\n'));
+
+  ({ notes } = await vaultfs.scanStore());
+  const renamed = await vaultfs.updateFile(notes[0], { title: 'Renamed Alpha' });
+  assert.equal(renamed.key, 'Renamed Alpha.md');
+  const names = await readdir(root);
+  assert.ok(names.includes('Renamed Alpha.md'));
+  assert.ok(!names.includes('Alpha.md'));
+});
+
+test('updateFile refuses a stale write with code conflict', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  const { notes } = await vaultfs.scanStore();
+  await vaultfs.updateFile(notes[0], { description: 'First change' });
+
+  await assert.rejects(() => vaultfs.updateFile(notes[0], { description: 'Stale change' }), (error) => error.code === 'conflict');
+  assert.doesNotMatch(await readFile(join(root, 'Alpha.md'), 'utf8'), /Stale change/);
+});
+
+test('CRLF, comments, unknown keys and the body survive a patch', async () => {
+  const root = await makeVault({ 'Beta.md': CRLF_BETA });
+  const { notes } = await vaultfs.scanStore();
+  await vaultfs.updateFile(notes[0], { description: 'Third' });
+
+  const text = await readFile(join(root, 'Beta.md'), 'utf8');
+  assert.match(text, /description: "Third"/);
+  assert.match(text, /# note/);
+  assert.match(text, /custom: yes/);
+  assert.ok(text.endsWith('Beta body.\r\n'));
+  assert.equal(
+    (text.match(/\n/g) ?? []).length,
+    (text.match(/\r\n/g) ?? []).length,
+    'every newline is CRLF',
+  );
+});
+
+test('moveFile moves a note into a collection it creates', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  const { notes } = await vaultfs.scanStore();
+
+  const moved = await vaultfs.moveFile(notes[0], 'Dev/Js');
+  assert.equal(moved.key, 'Dev/Js/Alpha.md');
+  assert.ok((await readdir(join(root, 'Dev/Js'))).includes('Alpha.md'));
+  assert.ok(!(await readdir(root)).includes('Alpha.md'));
+});
+
+test('trashFile moves a note into the hidden trash folder and the rescan hides it', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  const { notes } = await vaultfs.scanStore();
+
+  const { trashedAs } = await vaultfs.trashFile(notes[0]);
+  assert.match(basename(trashedAs), /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z--Alpha\.md$/);
+  assert.deepEqual(await readdir(join(root, '.vaultmarks-trash')), [basename(trashedAs)]);
+  assert.ok(!(await readdir(root)).includes('Alpha.md'));
+  assert.equal((await vaultfs.scanStore()).notes.length, 0);
+});
+
+test('createDirectory validates names and refuses duplicates case-insensitively', async () => {
+  const root = await makeVault();
+  assert.equal((await vaultfs.createDirectory('Dev')).path, 'Dev');
+  assert.ok((await readdir(root)).includes('Dev'));
+  await assert.rejects(() => vaultfs.createDirectory('dev'), (error) => error.code === 'exists');
+  await assert.rejects(() => vaultfs.createDirectory('bad/name'), (error) => error.code === 'invalid-name');
+  await assert.rejects(() => vaultfs.createDirectory('   '), (error) => error.code === 'invalid-name');
+});
