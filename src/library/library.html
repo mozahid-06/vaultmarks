@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vaultmarks</title>
+    <link rel="stylesheet" href="library.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="wordmark">Vaultmarks</span>
+      <input id="search" type="search" placeholder="Search bookmarks…" autocomplete="off" spellcheck="false">
+      <button id="open-settings" class="icon-button" type="button" title="Settings" aria-label="Settings"></button>
+    </header>
+
+    <div id="onboarding" class="center-panel" hidden>
+      <h1>Vaultmarks</h1>
+      <p id="onboarding-message" class="muted">Choose your Obsidian vault folder to start.</p>
+      <button id="choose-folder" class="primary" type="button">Choose your Obsidian vault folder</button>
+    </div>
+
+    <div id="workspace" class="workspace" hidden>
+      <aside id="sidebar" class="sidebar">
+        <nav id="all" class="nav-list" aria-label="All bookmarks"></nav>
+        <div class="sidebar-heading">
+          <span>Collections</span>
+          <button id="new-collection" class="icon-button" type="button" title="New collection" aria-label="New collection"></button>
+        </div>
+        <nav id="collections" class="nav-list" aria-label="Collections"></nav>
+      </aside>
+
+      <main class="main">
+        <div id="reconnect" class="banner" hidden>
+          <span>Vaultmarks lost access to your vault folder.</span>
+          <button id="reconnect-folder" class="primary" type="button">Reconnect folder</button>
+        </div>
+        <div class="main-head">
+          <h1 id="collection-title">All bookmarks</h1>
+          <span id="summary" class="muted"></span>
+          <button id="new-bookmark" class="primary" type="button">New bookmark</button>
+        </div>
+        <div id="list" class="list"></div>
+        <p id="empty" class="empty" hidden></p>
+      </main>
+    </div>
+
+    <dialog id="detail" class="dialog"></dialog>
+
+    <dialog id="settings" class="dialog">
+      <h2>Settings</h2>
+      <div id="settings-body"></div>
+    </dialog>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <script type="module" src="library.js"></script>
+  </body>
+</html>

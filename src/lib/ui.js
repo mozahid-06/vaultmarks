@@ -14,6 +14,8 @@ const ICONS = {
   check: ['M5 13l4 4L19 7'],
   copy: ['M9 9h9v11H9z', 'M6 15H4V4h11v2'],
   folder: ['M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+  'chevron-right': ['M9 6l6 6-6 6'],
+  'chevron-down': ['M6 9l6 6 6-6'],
 };
 
 export function h(tag, props = {}, ...children) {
@@ -63,19 +65,14 @@ export async function openLibraryTab() {
   const storedId = await getLibraryTabId();
   if (storedId != null) {
     try {
-      await chrome.tabs.get(storedId);
-      await chrome.tabs.update(storedId, { active: true });
-      return storedId;
+      const tab = await chrome.tabs.get(storedId);
+      if (tab && (tab.url === undefined || tab.url.startsWith(url))) {
+        await chrome.tabs.update(storedId, { active: true });
+        return storedId;
+      }
     } catch {
-      // The tab is gone; fall through and find or create one.
+      // The tab is gone; create a fresh one below.
     }
-  }
-
-  const [existing] = await chrome.tabs.query({ url: `${url}*` });
-  if (existing) {
-    await setLibraryTabId(existing.id);
-    await chrome.tabs.update(existing.id, { active: true });
-    return existing.id;
   }
 
   const created = await chrome.tabs.create({ url });
