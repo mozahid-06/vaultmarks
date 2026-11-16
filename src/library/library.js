@@ -741,6 +741,18 @@ function renderSettings() {
 }
 
 let dragPath = null;
+const MOVE_TYPE = 'application/x-vaultmarks-move';
+const MOVE_TOKEN = crypto.randomUUID();
+
+function isCollectionDrag(event) {
+  return event.dataTransfer?.types.includes(MOVE_TYPE) ?? false;
+}
+
+function draggedCollection(event) {
+  if (!isCollectionDrag(event)) return null;
+  const [token, ...rest] = event.dataTransfer.getData(MOVE_TYPE).split('\n');
+  return token === MOVE_TOKEN ? rest.join('\n') : null;
+}
 
 function markDrop(node) {
   for (const marked of document.querySelectorAll('.drop-target')) {
@@ -762,8 +774,10 @@ function wireSidebarDnd() {
   collections.addEventListener('dragstart', (event) => {
     const row = event.target.closest?.('.collection-row');
     if (!row) return;
+    clearDragMarks();
     dragPath = row.dataset.path;
     event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(MOVE_TYPE, `${MOVE_TOKEN}\n${dragPath}`);
     row.classList.add('dragging');
   });
 
@@ -773,6 +787,10 @@ function wireSidebarDnd() {
   });
 
   collections.addEventListener('dragover', (event) => {
+    if (!isCollectionDrag(event)) {
+      markDrop(null);
+      return;
+    }
     const row = event.target.closest?.('.collection-row');
     const destination = row ? dropDestination(dragPath, row.dataset.path) : null;
     if (destination == null) {
@@ -789,18 +807,19 @@ function wireSidebarDnd() {
   });
 
   collections.addEventListener('drop', (event) => {
+    const source = draggedCollection(event);
+    if (source == null) return;
     const row = event.target.closest?.('.collection-row');
-    const destination = row ? dropDestination(dragPath, row.dataset.path) : null;
+    const destination = row ? dropDestination(source, row.dataset.path) : null;
     if (destination == null) return;
     event.preventDefault();
-    const source = dragPath;
     dragPath = null;
     clearDragMarks();
     moveCollection(source, destination);
   });
 
   all.addEventListener('dragover', (event) => {
-    if (dropDestination(dragPath, '') == null) {
+    if (!isCollectionDrag(event) || dropDestination(dragPath, '') == null) {
       markDrop(null);
       return;
     }
@@ -814,10 +833,11 @@ function wireSidebarDnd() {
   });
 
   all.addEventListener('drop', (event) => {
-    const destination = dropDestination(dragPath, '');
+    const source = draggedCollection(event);
+    if (source == null) return;
+    const destination = dropDestination(source, '');
     if (destination == null) return;
     event.preventDefault();
-    const source = dragPath;
     dragPath = null;
     clearDragMarks();
     moveCollection(source, destination);

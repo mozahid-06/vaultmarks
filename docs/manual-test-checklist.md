@@ -70,8 +70,9 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] Drag a collection row onto another collection: it nests there, the target
       expands, the source row dims, and the folder and its notes move on disk.
 - [ ] Drag a nested collection onto **All bookmarks**: it returns to the top
-      level, the selection follows if it was selected, and the target is not a
-      no-op when the collection is already at the top.
+      level and the selection follows if it was selected. Dragging a collection
+      that is already at the top onto **All bookmarks** is not accepted and
+      changes nothing.
 - [ ] Drag a collection onto itself or one of its own descendants: no target
       outline appears and nothing changes.
 - [ ] Drag a collection onto a collection that already has a child with that
