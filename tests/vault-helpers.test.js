@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { joinPath, dirOf, baseOf, isUnder, remapPath } from '../src/lib/paths.js';
+import { joinPath, dirOf, baseOf, isUnder, remapPath, dropDestination } from '../src/lib/paths.js';
 import { mapLimit } from '../src/lib/concurrency.js';
 
 test('path helpers join and split vault keys', () => {
@@ -36,4 +36,16 @@ test('remapPath follows a moved prefix and leaves others alone', () => {
   assert.equal(remapPath('Dev/Js', 'Dev', 'Archive/Dev'), 'Archive/Dev/Js');
   assert.equal(remapPath('Dev', 'Dev', 'Archive/Dev'), 'Archive/Dev');
   assert.equal(remapPath('Design', 'Dev', 'Archive/Dev'), 'Design');
+});
+
+test('dropDestination nests, un-nests and refuses illegal drops', () => {
+  assert.equal(dropDestination('Design & Graphics', 'Development'), 'Development/Design & Graphics');
+  assert.equal(dropDestination('Development/Snippets & Demos', ''), 'Snippets & Demos');
+  assert.equal(dropDestination('Design & Graphics', ''), null);
+  assert.equal(dropDestination('Development/Miscellaneous', 'Development'), null);
+  assert.equal(dropDestination('Development', 'Development'), null);
+  assert.equal(dropDestination('Development', 'Development/Learning'), null);
+  assert.equal(dropDestination('Development/Learning', 'Development/Learning/Deep'), null);
+  assert.equal(dropDestination('Development', 'Development 2'), 'Development 2/Development');
+  assert.equal(dropDestination('', 'Development'), null);
 });
