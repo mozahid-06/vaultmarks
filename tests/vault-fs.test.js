@@ -18,6 +18,8 @@ let caseInsensitiveLookup = false;
 let allowFileMove = true;
 let failWriteAfter = Infinity;
 let writeAttempts = 0;
+let directoryPermission = 'granted';
+const permissionCalls = [];
 
 async function sameFakePath(a, b) {
   if (!a || !b) return false;
@@ -81,6 +83,16 @@ class FakeDir {
     this.path = path;
     this.name = basename(path);
     this.kind = 'directory';
+  }
+
+  async queryPermission() {
+    permissionCalls.push(this.path);
+    return directoryPermission;
+  }
+
+  async requestPermission() {
+    permissionCalls.push(`request:${this.path}`);
+    return directoryPermission;
   }
 
   async getDirectoryHandle(name, { create = false } = {}) {
@@ -148,8 +160,14 @@ globalThis.indexedDB = {
           const tx = {};
           tx.objectStore = () => ({
             get: () => makeRequest(currentHandle),
-            put: () => makeRequest(undefined),
-            delete: () => makeRequest(undefined),
+            put: (value) => {
+              currentHandle = value;
+              return makeRequest(undefined);
+            },
+            delete: () => {
+              currentHandle = null;
+              return makeRequest(undefined);
+            },
           });
           setTimeout(() => tx.oncomplete?.(), 0);
           return tx;
@@ -437,4 +455,92 @@ test('moveDirectory leaves the source intact when a copy fails part-way', async 
     writeAttempts = 0;
   }
   assert.deepEqual((await readdir(join(root, 'Dev'))).sort(), ['A.md', 'B.md']);
+});
+
+// --- Stored vault record -----------------------------------------------------
+// Chrome keeps a folder grant on the exact path the user picked. The record has
+// to remember that path, and permission must be asked for on it, or the grant
+// can never be restored (see the reconnect loop fixed in these tests).
+
+const withDirectoryPicker = async (root, run) => {
+  const original = globalThis.showDirectoryPicker;
+  globalThis.showDirectoryPicker = async () => new FakeDir(root);
+  try {
+    return await run();
+  } finally {
+    globalThis.showDirectoryPicker = original;
+  }
+};
+
+test('pickStore remembers the picked root so the grant can be restored', async () => {
+  const root = await makeVault({ 'Bookmarks/Alpha.md': ALPHA });
+  currentHandle = null;
+  permissionCalls.length = 0;
+
+  const settings = await withDirectoryPicker(root, () => vaultfs.pickStore());
+
+  assert.equal(settings.storePath, 'Bookmarks');
+  assert.equal(settings.storeLabel, `${basename(root)}/Bookmarks`);
+  assert.ok(currentHandle?.storePath === 'Bookmarks', 'stores a {handle, storePath} record, not the child handle');
+  assert.ok(await currentHandle.handle.isSameEntry(new FakeDir(root)), 'the stored handle is the picked folder');
+
+  const scan = await vaultfs.scanStore();
+  assert.deepEqual(scan.notes.map((note) => note.key).sort(), ['Alpha.md']);
+  assert.deepEqual(permissionCalls, [root], 'permission is checked on the picked root, not on Bookmarks');
+});
+
+test('pickStore stores the picked folder for a flat vault too', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  currentHandle = null;
+
+  const settings = await withDirectoryPicker(root, () => vaultfs.pickStore());
+
+  assert.equal(settings.storePath, '');
+  assert.equal(settings.storeLabel, basename(root));
+  assert.equal(currentHandle.storePath, '');
+  assert.ok(await currentHandle.handle.isSameEntry(new FakeDir(root)));
+});
+
+test('a child handle left by an older version still scans the same notes', async () => {
+  const root = await makeVault({ 'Bookmarks/Alpha.md': ALPHA });
+  currentHandle = new FakeDir(join(root, 'Bookmarks'));
+  permissionCalls.length = 0;
+
+  const scan = await vaultfs.scanStore();
+
+  assert.deepEqual(scan.notes.map((note) => note.key), ['Alpha.md']);
+  assert.deepEqual(permissionCalls, [join(root, 'Bookmarks')]);
+});
+
+test('a flat legacy record is adopted in place, keeping the stored vault', async () => {
+  const root = await makeVault({ 'Alpha.md': ALPHA });
+  currentHandle = new FakeDir(root);
+
+  assert.equal(await vaultfs.isLegacyStoreRecord(), true);
+  assert.equal(await vaultfs.adoptLegacyStoreRecord(), true);
+  assert.equal(await vaultfs.isLegacyStoreRecord(), false);
+  assert.equal(currentHandle.storePath, '');
+  assert.ok(await currentHandle.handle.isSameEntry(new FakeDir(root)));
+  assert.deepEqual((await vaultfs.scanStore()).notes.map((note) => note.key), ['Alpha.md']);
+});
+
+test('a missing or revoked grant reports needs-permission and keeps the record', async () => {
+  const root = await makeVault({ 'Bookmarks/Alpha.md': ALPHA });
+  currentHandle = { handle: new FakeDir(root), storePath: 'Bookmarks' };
+  directoryPermission = 'prompt';
+  try {
+    await assert.rejects(() => vaultfs.scanStore(), (error) => error.code === 'needs-permission');
+  } finally {
+    directoryPermission = 'granted';
+  }
+  assert.equal(currentHandle.storePath, 'Bookmarks');
+});
+
+test('getStoredStore returns the grantable root, not the notes folder', async () => {
+  const root = await makeVault({ 'Bookmarks/Alpha.md': ALPHA });
+  currentHandle = { handle: new FakeDir(root), storePath: 'Bookmarks' };
+
+  const handle = await vaultfs.getStoredStore();
+
+  assert.equal(handle.name, basename(root));
 });

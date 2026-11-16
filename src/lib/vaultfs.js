@@ -52,8 +52,43 @@ async function withHandleStore(mode, run) {
   }
 }
 
+function isDirectoryHandle(value) {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof value.queryPermission === 'function' &&
+    value.kind === 'directory'
+  );
+}
+
+// Chrome keeps a folder grant on the path the user picked. Ask for permission
+// on that handle; a handle below it (the old `Bookmarks` child) never matches
+// the grant, so it has to be resolved from the root instead of stored.
+async function readStoredStore() {
+  const record = await withHandleStore('readonly', (store) => idbRequest(store.get(STORE_KEY)));
+  if (!record) return null;
+  if (isDirectoryHandle(record)) return { handle: record, storePath: '', legacy: true };
+  if (isDirectoryHandle(record.handle)) {
+    return { handle: record.handle, storePath: String(record.storePath ?? ''), legacy: false };
+  }
+  return null;
+}
+
 export async function getStoredStore() {
-  return (await withHandleStore('readonly', (store) => idbRequest(store.get(STORE_KEY)))) ?? null;
+  return (await readStoredStore())?.handle ?? null;
+}
+
+export async function isLegacyStoreRecord() {
+  return (await readStoredStore())?.legacy ?? false;
+}
+
+// Older versions stored a bare handle. For a flat vault that handle is the
+// picked folder, so the record can be rewritten without asking again.
+export async function adoptLegacyStoreRecord() {
+  const stored = await readStoredStore();
+  if (!stored?.legacy) return false;
+  await putStoreHandle({ handle: stored.handle, storePath: '' });
+  return true;
 }
 
 export async function clearStoredStore() {
@@ -73,21 +108,22 @@ export async function pickStore() {
     throw error;
   }
 
-  let store = picked;
+  let storePath = '';
   let settings;
   try {
-    store = await picked.getDirectoryHandle('Bookmarks');
+    await picked.getDirectoryHandle('Bookmarks');
+    storePath = 'Bookmarks';
     settings = {
       vaultName: picked.name,
-      storePath: 'Bookmarks',
-      storeLabel: `${picked.name}/Bookmarks`,
+      storePath,
+      storeLabel: `${picked.name}/${storePath}`,
       obsidianLinks: true,
     };
   } catch {
     settings = { vaultName: null, storePath: '', storeLabel: picked.name, obsidianLinks: false };
   }
 
-  await putStoreHandle(store);
+  await putStoreHandle({ handle: picked, storePath });
   return settings;
 }
 
@@ -106,12 +142,12 @@ export async function requestPermission(handle) {
 }
 
 async function requireWritableStore() {
-  const handle = await getStoredStore();
-  if (!handle) throw new VaultError('no-store');
-  if ((await permissionOf(handle)) !== 'granted') {
+  const stored = await readStoredStore();
+  if (!stored) throw new VaultError('no-store');
+  if ((await permissionOf(stored.handle)) !== 'granted') {
     throw new VaultError('needs-permission', 'Folder access needs to be granted again');
   }
-  return handle;
+  return stored.storePath === '' ? stored.handle : resolveDirectory(stored.handle, stored.storePath);
 }
 
 async function resolveDirectory(root, path, { create = false } = {}) {

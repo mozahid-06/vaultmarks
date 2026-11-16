@@ -84,6 +84,13 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] Restart Chromium with the same profile and open the library: if the
       grant was not retained, the **Reconnect folder** banner appears and
       clicking it restores the list without a crash.
+- [ ] After reconnecting, choose **Allow on every visit** in Chrome's prompt,
+      restart Chromium and reopen the library: no banner appears.
+- [ ] With a vault set up by an older version (the stored handle is the
+      `Bookmarks` child, not the picked root), open the library: the banner
+      reads "Vaultmarks needs one reconnection after the update" and its button
+      is **Choose vault folder**; picking the vault root once clears it for
+      later launches.
 - [ ] Close the library, `mv /tmp/vaultmarks-test-vault /tmp/gone`, reopen
       the library: onboarding returns with "Folder not found; choose it
       again." and picking a folder recovers.

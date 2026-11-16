@@ -36,9 +36,20 @@ opens the library tab, where you pick your vault root (for example
 prompt can otherwise close the popup. The grant covers reading and writing
 inside that folder only.
 
-Chromium forgets folder permissions when it restarts. On the next launch the
-panel shows a **Reconnect folder** banner: one click re-grants access, and
-the bookmark list is rebuilt.
+Chromium can remember that grant. When it asks, choose **Allow on every
+visit**: Vaultmarks then reopens the saved folder without prompting, including
+after a restart. Choosing **Allow this time** grants access only until the panel
+closes, so the next launch shows the **Reconnect folder** banner; one click
+re-grants access and rebuilds the list.
+
+If the banner comes back every time, Chrome is not keeping the grant: click
+**Reconnect folder** and pick **Allow on every visit** in the prompt.
+
+Vaultmarks used to store the `Bookmarks` subfolder instead of the vault root.
+Chrome files the grant under the folder you picked, so that old record could
+never match it and reconnected on every launch. On the first launch after
+updating, the banner asks once to **Choose vault folder**; after that the
+grant is remembered. A flat vault needs no action.
 
 ## Usage
 

@@ -4,6 +4,8 @@ import {
   permissionOf,
   requestPermission,
   pickStore,
+  isLegacyStoreRecord,
+  adoptLegacyStoreRecord,
   clearStoredStore,
   scanStore,
   createDirectory,
@@ -45,6 +47,7 @@ const state = {
   prefill: null,
   captured: null,
   saveAnyway: false,
+  reconnectMode: 'reconnect',
 };
 
 const expanded = new Set();
@@ -65,13 +68,25 @@ function showOnboarding(message) {
   if (message) el('onboarding-message').textContent = message;
 }
 
-function showReconnect() {
+// Chrome can remember the folder, but only offers the permanent choice in the
+// prompt it shows when permission is asked for again. Say so at that moment.
+const RECONNECT_TEXT = {
+  reconnect: 'Vaultmarks needs folder access again. When Chrome asks, choose “Allow on every visit”.',
+  repick: 'Vaultmarks needs one reconnection after the update: choose your vault folder.',
+};
+
+function showReconnect(mode) {
+  if (mode) state.reconnectMode = mode;
+  const kind = state.reconnectMode === 'repick' ? 'repick' : 'reconnect';
+  el('reconnect-message').textContent = RECONNECT_TEXT[kind];
+  el('reconnect-folder').textContent = kind === 'repick' ? 'Choose vault folder' : 'Reconnect folder';
   el('reconnect').hidden = false;
   el('onboarding').hidden = true;
   el('workspace').hidden = false;
 }
 
 function showWorkspace() {
+  state.reconnectMode = 'reconnect';
   el('onboarding').hidden = true;
   el('reconnect').hidden = true;
   el('workspace').hidden = false;
@@ -964,7 +979,12 @@ async function init() {
     if (tabView) chooseFolder();
     else openLibraryTab();
   });
-  el('reconnect-folder').addEventListener('click', reconnect);
+  el('reconnect-folder').addEventListener('click', () => {
+    // Picking a folder can close the popup, so a re-pick runs in the tab.
+    if (state.reconnectMode !== 'repick') reconnect();
+    else if (tabView) chooseFolder();
+    else openLibraryTab();
+  });
   el('new-collection').addEventListener('click', newCollection);
   el('search').addEventListener('input', onSearchInput);
   document.addEventListener('keydown', onKeydown);
@@ -984,6 +1004,20 @@ async function init() {
   if (!state.settings.storeLabel) {
     showOnboarding();
     return;
+  }
+
+  // Older versions stored the `Bookmarks` child handle. Chrome's grant is on
+  // the folder the user picked, so that handle can never be restored. A flat
+  // vault stores the picked folder itself and only needs the record rewritten.
+  let legacy = false;
+  try {
+    legacy = await isLegacyStoreRecord();
+    if (legacy && !state.settings.storePath) {
+      await adoptLegacyStoreRecord();
+      legacy = false;
+    }
+  } catch {
+    legacy = false;
   }
 
   let handle = null;
@@ -1008,7 +1042,7 @@ async function init() {
     return;
   }
   if (permission === 'prompt') {
-    showReconnect();
+    showReconnect(legacy ? 'repick' : 'reconnect');
     return;
   }
 
