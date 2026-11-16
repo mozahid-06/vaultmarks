@@ -67,6 +67,16 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       created and the notes travel with it.
 - [ ] Delete a collection with notes (hover → trash): it lands in
       `.vaultmarks-trash/` and disappears from the sidebar and the dropdown.
+- [ ] Drag a collection row onto another collection: it nests there, the target
+      expands, the source row dims, and the folder and its notes move on disk.
+- [ ] Drag a nested collection onto **All bookmarks**: it returns to the top
+      level, the selection follows if it was selected, and the target is not a
+      no-op when the collection is already at the top.
+- [ ] Drag a collection onto itself or one of its own descendants: no target
+      outline appears and nothing changes.
+- [ ] Drag a collection onto a collection that already has a child with that
+      name: the "already exists" toast appears and neither folder changes.
+- [ ] The hover pencil still renames/moves a collection after drag-and-drop.
 
 ## Permission loss (Task 8)
 

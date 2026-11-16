@@ -16,7 +16,7 @@ import {
 } from '../lib/vaultfs.js';
 import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
 import { createNoteText, filenameBase } from '../lib/markdown.js';
-import { dirOf, baseOf, isUnder, remapPath } from '../lib/paths.js';
+import { dirOf, baseOf, isUnder, remapPath, dropDestination } from '../lib/paths.js';
 import { isSavableUrl, savePrefill, captureActiveTab } from '../lib/capture.js';
 import { isTabView } from '../lib/view.js';
 import {
@@ -153,7 +153,7 @@ function renderNodes(nodes, depth) {
       { className: 'collection-group' },
       h(
         'div',
-        { className: 'collection-row' },
+        { className: 'collection-row', draggable: 'true', dataset: { path: node.path } },
         hasChildren
           ? h(
               'button',
@@ -740,6 +740,113 @@ function renderSettings() {
   );
 }
 
+let dragPath = null;
+
+function markDrop(node) {
+  for (const marked of document.querySelectorAll('.drop-target')) {
+    if (marked !== node) marked.classList.remove('drop-target');
+  }
+  node?.classList.add('drop-target');
+}
+
+function clearDragMarks() {
+  for (const node of document.querySelectorAll('.dragging, .drop-target')) {
+    node.classList.remove('dragging', 'drop-target');
+  }
+}
+
+function wireSidebarDnd() {
+  const collections = el('collections');
+  const all = el('all');
+
+  collections.addEventListener('dragstart', (event) => {
+    const row = event.target.closest?.('.collection-row');
+    if (!row) return;
+    dragPath = row.dataset.path;
+    event.dataTransfer.effectAllowed = 'move';
+    row.classList.add('dragging');
+  });
+
+  collections.addEventListener('dragend', () => {
+    dragPath = null;
+    clearDragMarks();
+  });
+
+  collections.addEventListener('dragover', (event) => {
+    const row = event.target.closest?.('.collection-row');
+    const destination = row ? dropDestination(dragPath, row.dataset.path) : null;
+    if (destination == null) {
+      markDrop(null);
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    markDrop(row);
+  });
+
+  collections.addEventListener('dragleave', (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) markDrop(null);
+  });
+
+  collections.addEventListener('drop', (event) => {
+    const row = event.target.closest?.('.collection-row');
+    const destination = row ? dropDestination(dragPath, row.dataset.path) : null;
+    if (destination == null) return;
+    event.preventDefault();
+    const source = dragPath;
+    dragPath = null;
+    clearDragMarks();
+    moveCollection(source, destination);
+  });
+
+  all.addEventListener('dragover', (event) => {
+    if (dropDestination(dragPath, '') == null) {
+      markDrop(null);
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    markDrop(all);
+  });
+
+  all.addEventListener('dragleave', (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) markDrop(null);
+  });
+
+  all.addEventListener('drop', (event) => {
+    const destination = dropDestination(dragPath, '');
+    if (destination == null) return;
+    event.preventDefault();
+    const source = dragPath;
+    dragPath = null;
+    clearDragMarks();
+    moveCollection(source, destination);
+  });
+}
+
+async function moveCollection(fromPath, destination) {
+  try {
+    const { path } = await moveDirectory(fromPath, destination);
+    if (isUnder(state.collection, fromPath)) state.collection = remapPath(state.collection, fromPath, path);
+    for (const p of [...expanded]) {
+      if (isUnder(p, fromPath)) {
+        expanded.delete(p);
+        expanded.add(remapPath(p, fromPath, path));
+      }
+    }
+    const parent = dirOf(path);
+    if (parent !== '') expanded.add(parent);
+    toast(`Moved to ${path}`, 'success');
+    notifyChanged();
+    await refresh();
+    return path;
+  } catch (error) {
+    toast(messageFor(error), 'error');
+    if (error?.code === 'needs-permission') showReconnect();
+    return null;
+  }
+}
+
 async function newCollection() {
   const where = state.collection === '' ? '' : ` in ${state.collection}`;
   const name = window.prompt(`Collection name${where}`);
@@ -764,24 +871,7 @@ async function newCollection() {
 async function renameCollection(node) {
   const entered = window.prompt('Collection path', node.path);
   if (entered == null || entered.trim() === '' || entered.trim() === node.path) return;
-  try {
-    const { path } = await moveDirectory(node.path, entered);
-    if (isUnder(state.collection, node.path)) state.collection = remapPath(state.collection, node.path, path);
-    for (const p of [...expanded]) {
-      if (isUnder(p, node.path)) {
-        expanded.delete(p);
-        expanded.add(remapPath(p, node.path, path));
-      }
-    }
-    const parent = dirOf(path);
-    if (parent !== '') expanded.add(parent);
-    toast(`Moved to ${path}`, 'success');
-    notifyChanged();
-    await refresh();
-  } catch (error) {
-    toast(messageFor(error), 'error');
-    if (error?.code === 'needs-permission') showReconnect();
-  }
+  await moveCollection(node.path, entered.trim());
 }
 
 async function deleteCollection(node) {
@@ -860,6 +950,7 @@ async function init() {
   document.addEventListener('keydown', onKeydown);
   trackDialogs();
   wireDetail();
+  wireSidebarDnd();
 
   window.addEventListener('focus', () => scheduleRefresh(300));
   document.addEventListener('visibilitychange', () => {

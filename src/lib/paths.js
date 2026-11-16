@@ -21,7 +21,7 @@ export function remapPath(path, from, to) {
 }
 
 export function dropDestination(source, target) {
-  if (source === '') return null;
+  if (!source) return null;
   if (isUnder(target, source)) return null;
   const destination = joinPath(target, baseOf(source));
   return destination === source ? null : destination;

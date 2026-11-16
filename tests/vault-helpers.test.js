@@ -48,4 +48,5 @@ test('dropDestination nests, un-nests and refuses illegal drops', () => {
   assert.equal(dropDestination('Development/Learning', 'Development/Learning/Deep'), null);
   assert.equal(dropDestination('Development', 'Development 2'), 'Development 2/Development');
   assert.equal(dropDestination('', 'Development'), null);
+  assert.equal(dropDestination(null, 'Development'), null);
 });
