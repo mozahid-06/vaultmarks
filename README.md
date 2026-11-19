@@ -140,7 +140,8 @@ read it, only Obsidian.
 What it does:
 
 - **Folder tree** — collections and nested collections as collapsible rows
-  with item counts and indent guides, sorted alphabetically.
+  with item counts, linked to their parent by a curved connector that ends in
+  a small ring, sorted alphabetically.
 - **Cards** — cover from the frontmatter `image` (falling back to the first
   body image), favicon tile when there is no cover, title, two-line
   description and the URL.
