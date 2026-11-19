@@ -93,7 +93,7 @@ const VIEWER_CSS = `
   .bv-viewer .bv-add-btn { flex: 0 0 auto !important; height: 40px !important; padding: 0 18px !important; font-size: 15px !important; }
   .bv-viewer .bv-add-input { height: 40px !important; }
 
-  .bv-viewer .bv-folder-summary { padding: 9px 10px !important; min-height: 42px !important; font-size: 0.98em !important; }
+  .bv-viewer .bv-folder-summary { padding: 8px 2px !important; min-height: 40px !important; font-size: 0.98em !important; }
   .bv-viewer .bv-folder-body { margin-left: 10px !important; padding-left: 10px !important; }
 
   .bv-viewer .bv-card-grid { gap: 10px !important; }
@@ -511,7 +511,7 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         }
 
         // The summary is a full-width header row: chevron, folder, name, count.
-        const summaryStyle = `display: flex; align-items: center; gap: 7px; list-style: none; cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(94, 234, 212, 0.12); background: rgba(94, 234, 212, 0.06); color: ${COLORS.title}; font-weight: 600; font-size: 0.94em; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;`;
+        const summaryStyle = `display: flex; align-items: center; gap: 7px; list-style: none; cursor: pointer; padding: 4px 2px; color: ${COLORS.title}; font-weight: 600; font-size: 0.94em; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;`;
         const summary = details.createEl("summary", {
             cls: "bv-folder-summary",
             attr: { style: summaryStyle }
@@ -534,13 +534,6 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         summary.createEl("span", {
             text: String(totalCount),
             attr: { style: `flex-shrink: 0; margin-left: 2px; padding: 1px 7px; border-radius: 999px; background: rgba(94, 234, 212, 0.14); color: ${COLORS.title}; font-size: 0.78em; font-weight: 500; opacity: 0.9;` }
-        });
-
-        summary.addEventListener("mouseenter", () => {
-            summary.setAttribute("style", summaryStyle + " background: rgba(94, 234, 212, 0.12);");
-        });
-        summary.addEventListener("mouseleave", () => {
-            summary.setAttribute("style", summaryStyle);
         });
 
         details.addEventListener("toggle", () => {
