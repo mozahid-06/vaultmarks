@@ -127,6 +127,41 @@ Lightweight, self-hosted Bitwarden-compatible password manager server.
 - Notes with dot-prefixed names or folders are ignored, as are any files that
   are not `.md` or that have no `url`.
 
+## Browse the library inside Obsidian
+
+`obsidian/vaultmarks.md` is a DataviewJS page that renders the same
+`Bookmarks` folder as a searchable, nested library — no extension needed to
+read it, only Obsidian.
+
+1. Install and enable the **Dataview** community plugin.
+2. Copy `obsidian/vaultmarks.md` into your vault (the root is fine) and open
+   it; Dataview runs the block automatically.
+
+What it does:
+
+- **Folder tree** — collections and nested collections as collapsible rows
+  with item counts and indent guides, sorted alphabetically.
+- **Cards** — cover from the frontmatter `image` (falling back to the first
+  body image), favicon tile when there is no cover, title, two-line
+  description and the URL.
+- **Search** — title, description, URL, tags and folder names, with matches
+  highlighted. <kbd>Esc</kbd> clears it; folders auto-expand while searching.
+- **Edit / Delete** — the pencil opens the note; the trash button arms itself
+  and a second click moves the note to Obsidian's trash.
+- **Fast add** — `+` next to the search box: paste a link, pick a collection
+  and press <kbd>Enter</kbd>. The page fetches title, description, cover and
+  favicon through Obsidian's `requestUrl` and writes a note in the format
+  above. Duplicate URLs are detected; when a page cannot be reached
+  (offline or blocked) it switches to a small Title/Description form so the
+  bookmark can still be saved.
+- **Phone layout** — controls, cards and the folder tree adapt to phone-width
+  panes: 40px touch targets, 16px inputs so iOS does not zoom on focus, and
+  a single-line ellipsised URL.
+
+The page expects the notes in a top-level `Bookmarks` folder, exactly where
+the extension writes them. If your store lives elsewhere, change the folder
+in the first line of the block (`dv.pages('"Bookmarks"')`).
+
 ## Permissions
 
 | Permission | Why |
