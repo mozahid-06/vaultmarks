@@ -78,35 +78,6 @@ const CHEVRON_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="12" hei
 const VIEWER_CSS = `
 .bv-viewer { max-width: 100%; }
 .bv-viewer * { box-sizing: border-box; }
-
-/* Curved connectors: each nested folder branches off its parent's spine
-   with a rounded elbow that ends in a small ring. */
-.bv-viewer .bv-wire { display: none; }
-.bv-viewer .bv-folder-body > details > .bv-folder-summary { padding-left: 16px !important; }
-.bv-viewer .bv-folder-body > details > .bv-folder-summary > .bv-wire {
-  display: block;
-  position: absolute;
-  left: -14px;
-  top: -5px;
-  bottom: 50%;
-  width: 22px;
-  border-left: 1.5px solid rgba(94, 234, 212, 0.40);
-  border-bottom: 1.5px solid rgba(94, 234, 212, 0.40);
-  border-bottom-left-radius: 14px;
-  pointer-events: none;
-}
-.bv-viewer .bv-folder-body > details > .bv-folder-summary > .bv-wire::after {
-  content: "";
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 8px;
-  height: 8px;
-  box-sizing: border-box;
-  border: 1.5px solid rgba(94, 234, 212, 0.9);
-  border-radius: 50%;
-  background: var(--background-primary, #1e1e1e);
-}
 @media (max-width: 620px) {
   .bv-viewer .bv-search-input,
   .bv-viewer .bv-add-url,
@@ -124,7 +95,6 @@ const VIEWER_CSS = `
 
   .bv-viewer .bv-folder-summary { padding: 8px 2px !important; min-height: 40px !important; font-size: 0.98em !important; }
   .bv-viewer .bv-folder-body { margin-left: 10px !important; padding-left: 10px !important; }
-  .bv-viewer .bv-folder-body > details > .bv-folder-summary > .bv-wire { left: -10px; width: 18px; }
 
   .bv-viewer .bv-card-grid { gap: 10px !important; }
   .bv-viewer .bv-card { border-radius: 10px !important; }
@@ -141,7 +111,6 @@ const VIEWER_CSS = `
 @media (max-width: 380px) {
   .bv-viewer .bv-thumb { width: 72px !important; height: 72px !important; min-width: 72px !important; margin: 6px !important; padding: 5px !important; }
   .bv-viewer .bv-folder-body { margin-left: 8px !important; padding-left: 8px !important; }
-  .bv-viewer .bv-folder-body > details > .bv-folder-summary > .bv-wire { left: -8px; width: 16px; }
   .bv-viewer .bv-card-content { padding: 8px 8px 8px 2px !important; }
   .bv-viewer .bv-card-title { font-size: 0.92em !important; }
   .bv-viewer .bv-card-desc { font-size: 0.76em !important; }
@@ -542,15 +511,11 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         }
 
         // The summary is a full-width header row: chevron, folder, name, count.
-        const summaryStyle = `position: relative; display: flex; align-items: center; gap: 7px; list-style: none; cursor: pointer; padding: 4px 2px; color: ${COLORS.title}; font-weight: 600; font-size: 0.94em; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;`;
+        const summaryStyle = `display: flex; align-items: center; gap: 7px; list-style: none; cursor: pointer; padding: 4px 2px; color: ${COLORS.title}; font-weight: 600; font-size: 0.94em; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;`;
         const summary = details.createEl("summary", {
             cls: "bv-folder-summary",
             attr: { style: summaryStyle }
         });
-
-        // Shown only for nested folders (styled by the stylesheet): the curved
-        // branch that links this folder to its parent's vertical spine.
-        summary.createEl("span", { cls: "bv-wire" });
 
         const chevronFor = (open) => `display: inline-flex; flex-shrink: 0; align-items: center; color: ${COLORS.title}; opacity: 0.8; transition: transform 120ms ease; transform: rotate(${open ? 90 : 0}deg);`;
         const chevron = summary.createEl("span", { attr: { style: chevronFor(!!forceOpen) } });
@@ -579,7 +544,7 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         // nesting level is visibly one step deeper than its parent.
         const body = details.createEl("div", {
             cls: "bv-folder-body",
-            attr: { style: "margin: 4px 0 6px 14px; padding-left: 14px; border-left: 1.5px solid rgba(94, 234, 212, 0.40);" }
+            attr: { style: "margin: 4px 0 6px 14px; padding-left: 14px; border-left: 1px solid rgba(94, 234, 212, 0.20);" }
         });
 
         if (node._subfolders && Object.keys(node._subfolders).length > 0) {
