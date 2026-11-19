@@ -9,8 +9,11 @@ full details of every bookmark.
   and the bookmark list with search, sized for a Chromium popup (780×600).
   **Save page** captures the page you are on (title, URL, description, cover,
   favicon, tags).
-- **Tab** — the ⤢ button opens the same page as a full-width tab; the panel
-  and the tab are one codebase and one dataset, so they can never drift.
+- **Tab** — the expand button opens the same page as a full-width tab; the
+  panel and the tab are one codebase and one dataset, so they can never drift.
+- **Obsidian view** — `obsidian/vaultmarks.md` is a ready-made DataviewJS
+  page that renders the same folder as a searchable, collapsible library,
+  with covers, edit/delete and fast add. No extension needed to read it.
 - **Surgical writes** — editing a bookmark patches only the keys it owns and
   leaves the rest of the note (comments, unknown keys, body, line endings,
   BOM) exactly as Obsidian wrote it.
@@ -19,14 +22,24 @@ full details of every bookmark.
 
 - Chromium 128+ (developed and tested on Chromium 155). The File System
   Access API is required; Firefox and Safari are not supported.
-- An Obsidian vault folder. Vaultmarks looks for a `Bookmarks` subfolder
-  inside the folder you pick and uses it when it exists.
+- An Obsidian vault folder. Vaultmarks uses the `Bookmarks` subfolder inside
+  the folder you pick when it exists.
+- Node.js 20+ — only needed to run the tests.
 
 ## Install
 
-1. Open `chrome://extensions`.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and select this folder (`/home/taxin/Work/vaultmarks`).
+1. Clone the repository, or use **Code → Download ZIP** and unzip it:
+
+   ```bash
+   git clone https://github.com/taxin-404/vaultmarks.git
+   ```
+
+2. Open `chrome://extensions` and turn on **Developer mode**.
+3. Click **Load unpacked** and select the folder that contains
+   `manifest.json` (the repository root).
+
+After pulling an update, press the reload icon on the extension card and
+reopen the panel.
 
 ## First run
 
@@ -60,23 +73,25 @@ collection, then press **Save**. If the URL is already saved, Vaultmarks says
 where it lives and offers **Open** or **Save anyway**. The note then appears in
 the list, and its detail view offers **Open in Obsidian**.
 
-**Panel and tab.** The panel and the full tab (opened with ⤢) are the same page:
-search, list and detail are identical. Type in the search box (or press
-<kbd>/</kbd>) to filter by title, description, URL, domain or tags;
-<kbd>Esc</kbd> clears it. Click a collection in the sidebar to filter by folder.
-Hover a row for three actions:
+**Panel and tab.** The panel and the full tab (opened with the expand button)
+are the same page: search, list and detail are identical. Type in the search
+box (or press <kbd>/</kbd>) to filter by title, description, URL, domain or
+tags; <kbd>Esc</kbd> clears it. Click a collection in the sidebar to filter by
+folder. Hover a row for three actions:
 
-- 👁 **Details** — cover, title, URL, description, date, tags and collection,
-  with **Open**, **Copy link**, **Edit**, **Move to…**, **Delete**,
+- **Details** — cover, title, URL, description, date, tags and collection,
+  with **Open**, **Copy link**, **Edit**, **Move to...**, **Delete**,
   **Open in Obsidian** and **Close**.
-- ✏️ **Edit** — change the title (this renames the file), URL, description,
+- **Edit** — change the title (this renames the file), URL, description,
   tags or collection.
-- 🗑 **Delete** — moves the note to the hidden `.vaultmarks-trash` folder
+- **Delete** — moves the note to the hidden `.vaultmarks-trash` folder
   inside the store; nothing is hard-deleted.
 
 **+ New** (top of the list) creates a note by hand. **+** next to
 *Collections* creates a folder at the store root. Collections are plain
-folders, so nested collections are made in Obsidian and show up here.
+folders, so folders made in Obsidian appear here too. Drag a collection row
+onto another one to nest it, or onto **All bookmarks** to move it back to the
+root; Vaultmarks refuses a drop that would put a collection inside itself.
 
 **Settings** (gear, sidebar header) shows the store folder, how many notes were
 skipped, the version, and **Rescan** / **Change folder**.
@@ -120,10 +135,12 @@ Lightweight, self-hosted Bitwarden-compatible password manager server.
   values are never truncated.
 - **Cover fallback:** if a note has no `image` key, the first image in the
   body (`![](...)`) is used as the thumbnail; failing that, a favicon tile is
-  shown. 167 of the existing notes keep their cover only in the body — they
-  all display a cover without any rewriting.
+  shown. Notes that only ever stored a cover in the body still display one —
+  no rewriting required.
+- Any `.md` note with a `url` key is picked up, including notes made by the
+  Obsidian Web Clipper. Unknown keys and the body are left untouched.
 - Filenames come from the title (capped at 120 characters / 200 bytes) and
-  collisions get ` (2)`, ` (3)`, … case-insensitively.
+  collisions get ` (2)`, ` (3)`, ... case-insensitively.
 - Notes with dot-prefixed names or folders are ignored, as are any files that
   are not `.md` or that have no `url`.
 
@@ -134,13 +151,16 @@ Lightweight, self-hosted Bitwarden-compatible password manager server.
 read it, only Obsidian.
 
 1. Install and enable the **Dataview** community plugin.
-2. Copy `obsidian/vaultmarks.md` into your vault (the root is fine) and open
-   it; Dataview runs the block automatically.
+2. In **Settings → Community plugins → Dataview**, turn on **Enable
+   JavaScript Queries**. Dataview does not run `dataviewjs` blocks without it.
+3. Copy `obsidian/vaultmarks.md` into your vault (the root is fine) and open
+   it; the block runs automatically.
 
 What it does:
 
-- **Folder tree** — collections and nested collections as collapsible rows
-  with item counts and indent guides, sorted alphabetically.
+- **Folder tree** — collections and nested collections as plain, collapsible
+  rows with item counts, sorted alphabetically, with a guide line that runs
+  down from each folder's chevron.
 - **Cards** — cover from the frontmatter `image` (falling back to the first
   body image), favicon tile when there is no cover, title, two-line
   description and the URL.
@@ -180,6 +200,9 @@ There are no host permissions and no background service worker.
   `ISO-timestamp--original-name.md`.
 - `chrome.storage` holds only the folder handle and settings; the vault is
   the single source of truth.
+- Every bookmark is a plain file, so Obsidian Sync, git, Syncthing or any
+  backup tool works unchanged. Uninstalling the extension or revoking the
+  folder grant leaves every note in place.
 
 ## Troubleshooting
 
@@ -187,11 +210,32 @@ There are no host permissions and no background service worker.
 | --- | --- |
 | "Reconnect folder" banner | Chromium dropped the folder grant on restart. Click **Reconnect folder**. |
 | "Folder not found; choose it again." | The folder moved or was renamed. Click the button and re-pick it. |
-| "This page can't be saved." | Browser-internal pages (`chrome://…`, the Web Store, `file://`) can't be read. Use a normal web page. |
+| "This page can't be saved." | Browser-internal pages (`chrome://...`, the Web Store, `file://`) can't be read. Use a normal web page. |
 | "This note changed in Obsidian. Reload and try again." | The note changed after the library loaded it. Click **Reload**, re-apply your edit. |
 | "Already saved in <collection>" | The URL is already in the vault; open it, or use **Save anyway** to add a second note. |
+| **Open in Obsidian** does nothing | Obsidian must be installed and registered for `obsidian://` links in that browser. |
+| The viewer note shows the code block instead of the library | Enable Dataview, then turn on **Enable JavaScript Queries** in its settings. |
+| The viewer shows "0 bookmarks" | The notes are not in a top-level `Bookmarks` folder; point `dv.pages('"Bookmarks"')` at your store. |
 
-## Tests
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `manifest.json` | MV3 manifest; no background worker, no host permissions. |
+| `src/library/` | The panel/tab page: HTML, CSS and the UI logic. |
+| `src/lib/` | Note parsing and surgical writing, indexing and search, paths, File System Access, capture. |
+| `icons/` | Toolbar and store icons. |
+| `obsidian/` | The DataviewJS viewer page. |
+| `tests/` | `node --test` suites. |
+| `docs/` | Design notes and the manual test checklist. |
+
+## Development
+
+There is no build step. Edit the files, press the reload icon on the
+extension card in `chrome://extensions`, and reopen the panel; the tab view
+reloads with it.
+
+### Tests
 
 ```bash
 npm test
@@ -201,6 +245,8 @@ Plain `node --test` with no dependencies: manifest/permissions, note parsing
 (CRLF, BOM, quoted and inline tags, body-cover fallback), surgical patching,
 filenames, the index/search/date/URI helpers, page-metadata capture, and the
 extension pages (no inline scripts/handlers, wiring ids present).
+
+### Manual checks
 
 `docs/manual-test-checklist.md` holds the parts a test cannot cover: the
 folder picker, real writes in Chromium, and Obsidian rendering.
