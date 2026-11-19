@@ -94,7 +94,7 @@ const VIEWER_CSS = `
   .bv-viewer .bv-add-input { height: 40px !important; }
 
   .bv-viewer .bv-folder-summary { padding: 8px 2px !important; min-height: 40px !important; font-size: 0.98em !important; }
-  .bv-viewer .bv-folder-body { margin-left: 10px !important; padding-left: 10px !important; }
+  .bv-viewer .bv-folder-body { margin-left: 8px !important; padding-left: 18px !important; }
 
   .bv-viewer .bv-card-grid { gap: 10px !important; }
   .bv-viewer .bv-card { border-radius: 10px !important; }
@@ -110,7 +110,7 @@ const VIEWER_CSS = `
 /* Small phones (iPhone SE width and similar) */
 @media (max-width: 380px) {
   .bv-viewer .bv-thumb { width: 72px !important; height: 72px !important; min-width: 72px !important; margin: 6px !important; padding: 5px !important; }
-  .bv-viewer .bv-folder-body { margin-left: 8px !important; padding-left: 8px !important; }
+  .bv-viewer .bv-folder-body { margin-left: 8px !important; padding-left: 14px !important; }
   .bv-viewer .bv-card-content { padding: 8px 8px 8px 2px !important; }
   .bv-viewer .bv-card-title { font-size: 0.92em !important; }
   .bv-viewer .bv-card-desc { font-size: 0.76em !important; }
@@ -544,7 +544,7 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         // nesting level is visibly one step deeper than its parent.
         const body = details.createEl("div", {
             cls: "bv-folder-body",
-            attr: { style: "margin: 4px 0 6px 14px; padding-left: 14px; border-left: 1px solid rgba(94, 234, 212, 0.20);" }
+            attr: { style: "margin: 0 0 6px 8px; padding-left: 24px; border-left: 1px solid rgba(94, 234, 212, 0.25);" }
         });
 
         if (node._subfolders && Object.keys(node._subfolders).length > 0) {
