@@ -25,6 +25,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] **Save page** on a normal web page opens the save dialog prefilled with
       title, description and the last-used collection, with the captured cover
       shown at the top (read-only).
+- [ ] On YouTube, open one video and switch to another one (same tab, no
+      reload); **Save page** and **+** capture the video on screen — its URL,
+      title, thumbnail and description — not the first video or the previous
+      one. Autoplay switching while the panel is open behaves the same.
 - [ ] Saving writes the note and it appears in the list immediately (and in an
       open library tab via `vault-changed`).
 - [ ] With `chrome://settings` active, **Save page** and **+** both toast

@@ -74,6 +74,11 @@ collection, then press **Save**. If the URL is already saved, Vaultmarks says
 where it lives and offers **Open** or **Save anyway**. The note then appears in
 the list, and its detail view offers **Open in Obsidian**.
 
+Capture follows the page itself: on sites that change content without a reload
+(YouTube, for example) it reads the URL and the current video's structured
+data, so the note matches what is on screen rather than the first video or the
+previous page.
+
 **Quick save.** Press **+** next to the search box on a normal web page.
 Vaultmarks captures the page and asks only two things: the collection and the
 name, pre-filled with the page title and selected so you can type over it.
