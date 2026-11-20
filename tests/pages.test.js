@@ -41,3 +41,9 @@ test('the panel pins its chrome and scrolls only the list', async () => {
   assert.match(css, /html\.panel \.main\s*\{[^}]*overflow:\s*hidden/i);
   assert.match(css, /html\.panel #list\s*\{[^}]*overflow-y:\s*auto/i);
 });
+
+test('long unbroken strings wrap inside a bookmark row', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /\.row-title\s*\{[^}]*overflow-wrap:\s*anywhere/i);
+  assert.match(css, /\.row-meta\s*\{[^}]*overflow-wrap:\s*anywhere/i);
+});

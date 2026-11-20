@@ -471,6 +471,7 @@ button.danger:hover:not(:disabled) {
   color: inherit;
   font-weight: 560;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .row-title:hover {
@@ -489,9 +490,11 @@ button.danger:hover:not(:disabled) {
 
 .row-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .row-actions {
