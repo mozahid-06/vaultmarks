@@ -87,3 +87,36 @@ test('brand token pairs meet WCAG AA', () => {
     assert.ok(contrast(fg, bg) >= 4.5, `${fg} on ${bg} is ${contrast(fg, bg).toFixed(2)}:1`);
   }
 });
+
+test('viewer uses the brand palette and paints its own dark surface', async () => {
+  const md = await read('obsidian/vaultmarks.md');
+  for (const literal of [
+    'cardBg: "#161226"',
+    'leftPanelBg: "#100c1e"',
+    'border: "rgba(167, 139, 250, 0.32)"',
+    'title: "#c4b5fd"',
+    'description: "#d7d3e3"',
+    'url: "#a78bfa"',
+    'domainLabel: "#a78bfa"',
+    'highlight: "rgba(196, 181, 253, 0.32)"',
+    'pageBg: "#14101f"',
+    'dv.container.style.backgroundColor = COLORS.pageBg',
+  ]) {
+    assert.ok(md.includes(literal), `missing ${literal}`);
+  }
+  assert.ok(!md.includes('#5eead4'), 'teal text colour survived');
+  assert.ok(!md.includes('rgba(94, 234, 212'), 'teal alpha survived');
+  assert.ok(md.includes('%23a78bfa'), 'fallback icon is not violet');
+  assert.ok(md.includes('background: #5a3fd1'), 'letter tile is not violet');
+});
+
+test('repo viewer matches the live note and keeps recent behaviour', async () => {
+  const [repo, live] = await Promise.all([
+    read('obsidian/vaultmarks.md'),
+    readFile(`${process.env.HOME}/Documents/notes/vaultmarks.md`, 'utf8'),
+  ]);
+  assert.equal(repo, live);
+  for (const name of ['renderFaviconFallback', 'whenNearViewport', 'mdDestination']) {
+    assert.ok(repo.includes(name), `missing ${name}`);
+  }
+});

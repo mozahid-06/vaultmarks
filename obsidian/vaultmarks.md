@@ -55,7 +55,7 @@ function getDomain(urlStr) {
 }
 
 // Fallback Bookmark SVG Icon encoded as Data URI (last resort, when nothing else loads)
-const FALLBACK_ICON = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%235eead4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+const FALLBACK_ICON = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
 
 // Edit (pencil) icon used for the edit button
 const EDIT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`;
@@ -138,8 +138,8 @@ const bodyCoverCache = new Map();
 
 function extractBodyCover(text) {
     if (!text) return "";
-    const match = text.match(/!\[[^\]]*\]\(\s*<?([^)\s>]+)>?\s*\)/);
-    return match ? match[1] : "";
+    const match = text.match(/!\[[^\]]*\]\(\s*(?:<([^>\n]+)>|([^)\s]+))(?:\s+"[^"]*")?\s*\)/);
+    return match ? (match[1] || match[2] || "") : "";
 }
 
 function getBodyCover(page) {
@@ -161,15 +161,24 @@ function getBodyCover(page) {
 
 // Colors for the card design
 const COLORS = {
-    cardBg: "#0f1e2e",
-    leftPanelBg: "#0a1420",
-    border: "rgba(94, 234, 212, 0.35)",
-    title: "#5eead4",
-    description: "#cbd5e1",
-    url: "#5eead4",
-    domainLabel: "#5eead4",
-    highlight: "rgba(94, 234, 212, 0.35)"
+    cardBg: "#161226",
+    leftPanelBg: "#100c1e",
+    border: "rgba(167, 139, 250, 0.32)",
+    title: "#c4b5fd",
+    description: "#d7d3e3",
+    url: "#a78bfa",
+    domainLabel: "#a78bfa",
+    highlight: "rgba(196, 181, 253, 0.32)",
+    pageBg: "#14101f"
 };
+
+// The viewer paints its own dark surface so every heading and tree row stays
+// readable when Obsidian's page is light.
+dv.container.style.backgroundColor = COLORS.pageBg;
+dv.container.style.color = COLORS.description;
+dv.container.style.padding = "12px";
+dv.container.style.borderRadius = "12px";
+dv.container.style.boxSizing = "border-box";
 
 // Shared style for the small edit/delete buttons on each card
 const ACTION_BTN_STYLE = `flex-shrink: 0; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`;
@@ -178,7 +187,7 @@ const DELETE_HOVER_STYLE = `${ACTION_BTN_STYLE} border-color: rgba(248, 113, 113
 
 // Styles for the "+" (add bookmark) button and its inline panel
 const ADD_BTN_STYLE = `flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; width: 36px; height: 36px; box-sizing: border-box; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`;
-const ADD_BTN_ACTIVE_STYLE = `${ADD_BTN_STYLE} opacity: 1; background: rgba(94, 234, 212, 0.12);`;
+const ADD_BTN_ACTIVE_STYLE = `${ADD_BTN_STYLE} opacity: 1; background: rgba(167, 139, 250, 0.12);`;
 const CREATOR_STYLE = `display: flex; flex-direction: column; gap: 8px; padding: 12px; margin: 4px 0 10px; border: 1px solid ${COLORS.border}; border-radius: 10px; background: ${COLORS.cardBg};`;
 const CREATOR_HIDDEN_STYLE = `display: none;`;
 const CREATOR_MANUAL_HIDDEN_STYLE = `display: none; gap: 8px; flex-direction: column;`;
@@ -240,39 +249,68 @@ function escapeHtml(str) {
 }
 
 function highlightText(text, tokens) {
-    const safe = escapeHtml(text || "");
-    if (!tokens || tokens.length === 0) return safe;
-    const escapedTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean);
-    if (escapedTokens.length === 0) return safe;
+    const raw = String(text || "");
+    if (!tokens || tokens.length === 0) return escapeHtml(raw);
+    const escapedTokens = tokens
+        .map(t => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length);
+    if (escapedTokens.length === 0) return escapeHtml(raw);
     const re = new RegExp(`(${escapedTokens.join('|')})`, 'gi');
-    return safe.replace(re, m => `<mark style="background: ${COLORS.highlight}; color: inherit; border-radius: 3px; padding: 0 1px;">${m}</mark>`);
+    // Escape each piece separately: marking the already-escaped string could
+    // cut an HTML entity in half (searching `amp` inside `&amp;`).
+    return raw.split(re)
+        .map((part, i) => i % 2 === 1
+            ? `<mark style="background: ${COLORS.highlight}; color: inherit; border-radius: 3px; padding: 0 1px;">${escapeHtml(part)}</mark>`
+            : escapeHtml(part))
+        .join('');
 }
 
-// Three-tier icon fallback: the note's own captured favicon -> Google's favicon
-// service (by domain) -> the bundled SVG icon. Nothing ever ends up blank/broken.
+// Icon fallback: the note's own captured icon -> Google's favicon service ->
+// DuckDuckGo's icon service -> a letter tile (or the bundled SVG when there is
+// no domain). Old handmade notes get a monogram until a real icon resolves.
 function renderFaviconFallback(container, domain, faviconUrl) {
-    const googleFavicon = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : null;
-    const firstSrc = (faviconUrl && faviconUrl.startsWith('http')) ? faviconUrl : (googleFavicon || FALLBACK_ICON);
+    const own = (typeof faviconUrl === "string" && /^(https?:|data:image\/)/i.test(faviconUrl)) ? faviconUrl : "";
+    const googleFavicon = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : "";
+    const duckFavicon = domain ? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico` : "";
+    const sources = [own, googleFavicon, duckFavicon].filter(Boolean);
+    if (sources.length === 0) sources.push(FALLBACK_ICON);
+    let index = 0;
 
     const iconImg = container.createEl("img", {
         attr: {
-            src: firstSrc,
-            style: "width: 34px; height: 34px; border-radius: 6px; opacity: 0.95;"
+            src: sources[0],
+            alt: domain ? `${domain} icon` : "Bookmark icon",
+            loading: "lazy",
+            decoding: "async",
+            style: "width: 34px; height: 34px; border-radius: 6px; opacity: 0.95; background: #cbd5e1; padding: 3px; box-sizing: border-box;"
         }
     });
 
-    let stage = (firstSrc === googleFavicon) ? "google" : (firstSrc === FALLBACK_ICON ? "fallback" : "own");
+    const showLetter = () => {
+        iconImg.remove();
+        const match = (domain || "?").replace(/^www\./i, "").match(/[a-z0-9]/i);
+        container.createEl("div", {
+            text: (match ? match[0] : "?").toUpperCase(),
+            attr: {
+                style: "width: 34px; height: 34px; border-radius: 8px; background: #5a3fd1; color: #f5f2ff; display: flex; align-items: center; justify-content: center; font-size: 1.05em; font-weight: 700; line-height: 1; user-select: none;"
+            }
+        });
+    };
 
     iconImg.onerror = () => {
-        if (stage === "own" && googleFavicon) {
-            stage = "google";
-            iconImg.src = googleFavicon;
-        } else {
-            stage = "fallback";
-            iconImg.onerror = null;
-            iconImg.src = FALLBACK_ICON;
-            iconImg.setAttribute("style", "width: 26px; height: 26px; opacity: 0.7;");
+        index += 1;
+        if (index < sources.length) {
+            iconImg.src = sources[index];
+            return;
         }
+        iconImg.onerror = null;
+        if (domain) {
+            showLetter();
+            return;
+        }
+        iconImg.src = FALLBACK_ICON;
+        iconImg.setAttribute("style", "width: 26px; height: 26px; opacity: 0.7;");
     };
 
     if (domain) {
@@ -287,9 +325,16 @@ function renderFaviconFallback(container, domain, faviconUrl) {
 
 // Renders a cover image that fills the left panel, falling back to the
 // favicon/domain treatment when the image fails to load.
-function renderCoverImage(panel, src, domain, favicon) {
+function renderCoverImage(panel, src, domain, favicon, alt) {
     const img = panel.createEl("img", {
-        attr: { src: src, style: "width: 100%; height: 100%; object-fit: cover; margin: -8px;" }
+        attr: {
+            src: src,
+            alt: alt || (domain ? `${domain} preview` : "Bookmark preview"),
+            loading: "lazy",
+            decoding: "async",
+            referrerpolicy: "no-referrer",
+            style: "width: 100%; height: 100%; object-fit: cover; margin: -8px;"
+        }
     });
     img.onerror = () => {
         img.onerror = null;
@@ -298,11 +343,35 @@ function renderCoverImage(panel, src, domain, favicon) {
     };
 }
 
-// Opens the underlying bookmark note in Obsidian so it can be edited directly
+// Body covers are read from disk one file at a time. Wait until a card is near
+// the viewport, so a vault with hundreds of notes does not read every note up
+// front.
+const coverObserver = (typeof IntersectionObserver === "function")
+    ? new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            coverObserver.unobserve(entry.target);
+            const load = entry.target.__bvLoadCover;
+            if (typeof load === "function") load();
+        }
+    }, { rootMargin: "300px 0px" })
+    : null;
+
+function whenNearViewport(el, load) {
+    if (!coverObserver) {
+        load();
+        return;
+    }
+    el.__bvLoadCover = load;
+    coverObserver.observe(el);
+}
+
+// Opens the underlying bookmark note in Obsidian so it can be edited directly.
+// A new tab keeps the viewer itself open: `getLeaf(false)` would replace it.
 function openNoteForEditing(page) {
     const file = app.vault.getAbstractFileByPath(page.file.path);
     if (file) {
-        const leaf = app.workspace.getLeaf(false);
+        const leaf = app.workspace.getLeaf("tab");
         leaf.openFile(file);
     }
 }
@@ -376,15 +445,18 @@ function renderCards(files, container, tokens) {
         });
 
         if (image && typeof image === 'string' && image.startsWith('http')) {
-            renderCoverImage(leftPanel, image, domain, favicon);
+            renderCoverImage(leftPanel, image, domain, favicon, title);
         } else {
             renderFaviconFallback(leftPanel, domain, favicon);
-            // No frontmatter cover: use the body image when the note has one.
-            getBodyCover(page).then((cover) => {
-                if (cover && leftPanel.isConnected) {
-                    leftPanel.empty();
-                    renderCoverImage(leftPanel, cover, domain, favicon);
-                }
+            // No frontmatter cover: use the body image when the note has one,
+            // once the card is close to the viewport.
+            whenNearViewport(leftPanel, () => {
+                getBodyCover(page).then((cover) => {
+                    if (cover && leftPanel.isConnected) {
+                        leftPanel.empty();
+                        renderCoverImage(leftPanel, cover, domain, favicon, title);
+                    }
+                });
             });
         }
 
@@ -434,7 +506,8 @@ function renderCards(files, container, tokens) {
             cls: "bv-action-btn",
             attr: {
                 style: ACTION_BTN_STYLE,
-                title: "Edit this bookmark note"
+                title: "Edit this bookmark note",
+                "aria-label": "Edit this bookmark note"
             }
         });
         editBtn.innerHTML = EDIT_ICON_SVG;
@@ -450,7 +523,8 @@ function renderCards(files, container, tokens) {
             cls: "bv-action-btn",
             attr: {
                 style: ACTION_BTN_STYLE,
-                title: "Delete this bookmark note"
+                title: "Delete this bookmark note",
+                "aria-label": "Delete this bookmark note"
             }
         });
         deleteBtn.innerHTML = TRASH_ICON_SVG;
@@ -485,8 +559,24 @@ function renderCards(files, container, tokens) {
             const deleted = await trashNote(page);
             if (deleted) {
                 forgetPage(page);
+                // Keep the folder badges honest without rebuilding the tree
+                // (which would collapse every open folder). Do this before the
+                // card leaves the DOM so its ancestry is still readable.
+                let parent = card.parentElement ? card.parentElement.closest("details") : null;
+                while (parent) {
+                    const badge = parent.querySelector("summary .bv-folder-count");
+                    if (badge) badge.setText(String(Math.max(0, Number(badge.getText()) - 1)));
+                    parent = parent.parentElement ? parent.parentElement.closest("details") : null;
+                }
                 card.remove();
+                // A search result is fully expanded, so rebuilding is safe and
+                // keeps the "N found" line accurate.
+                if (searchInput.value.trim()) renderAll(searchInput.value.trim());
+                else summaryEl.setText(`${pages.length} bookmark${pages.length === 1 ? '' : 's'}`);
             } else {
+                const message = `Could not move “${page.title || page.file.name}” to trash.`;
+                if (typeof Notice === "function") new Notice(message);
+                summaryEl.setText(message);
                 disarm();
             }
         };
@@ -533,7 +623,8 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
 
         summary.createEl("span", {
             text: String(totalCount),
-            attr: { style: `flex-shrink: 0; margin-left: 2px; padding: 1px 7px; border-radius: 999px; background: rgba(94, 234, 212, 0.14); color: ${COLORS.title}; font-size: 0.78em; font-weight: 500; opacity: 0.9;` }
+            cls: "bv-folder-count",
+            attr: { style: `flex-shrink: 0; margin-left: 2px; padding: 1px 7px; border-radius: 999px; background: rgba(167, 139, 250, 0.14); color: ${COLORS.title}; font-size: 0.78em; font-weight: 500; opacity: 0.9;` }
         });
 
         details.addEventListener("toggle", () => {
@@ -544,7 +635,7 @@ function renderTree(tree, parentEl, forceOpen, tokens) {
         // nesting level is visibly one step deeper than its parent.
         const body = details.createEl("div", {
             cls: "bv-folder-body",
-            attr: { style: "margin: 0 0 6px 8px; padding-left: 12px; border-left: 1px solid rgba(94, 234, 212, 0.25);" }
+            attr: { style: "margin: 0 0 6px 8px; padding-left: 12px; border-left: 1px solid rgba(167, 139, 250, 0.25);" }
         });
 
         if (node._subfolders && Object.keys(node._subfolders).length > 0) {
@@ -702,11 +793,24 @@ function uniqueNotePath(folder, baseName) {
     return candidate;
 }
 
+// Markdown ends a link at the first ")", so URLs like Wikipedia's
+// `..._(software)` need angle brackets. Plain URLs keep the plain form.
+function mdDestination(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (!/[\s()<>\\]/.test(raw)) return raw;
+    return `<${raw.replace(/[<>\\]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`).replace(/\s/g, "%20")}>`;
+}
+
+function urlKey(url) {
+    return String(url || "").replace(/#.*$/, "").replace(/\/+$/, "").toLowerCase();
+}
+
 function findExistingBookmark(url) {
-    const key = url.replace(/\/+$/, "").toLowerCase();
+    const key = urlKey(url);
     if (addedThisSession.has(key)) return addedThisSession.get(key);
     for (const page of pages) {
-        const pageUrl = typeof page.url === "string" ? page.url.replace(/\/+$/, "").toLowerCase() : "";
+        const pageUrl = typeof page.url === "string" ? urlKey(page.url) : "";
         if (pageUrl && pageUrl === key) {
             return { title: page.title || page.file.name, folder: page.file.folder };
         }
@@ -726,9 +830,9 @@ async function createBookmarkNote({ url, title, description, image, favicon, fol
     if (favicon) lines.push(`favicon: ${JSON.stringify(favicon)}`);
     lines.push("tags:", '  - "bookmarks"', "---", "");
 
-    if (image) lines.push(`![](${image})`, "");
+    if (image) lines.push(`![](${mdDestination(image)})`, "");
     if (description) lines.push(description, "");
-    lines.push(`[Open original ↗](${url})`, "");
+    lines.push(`[Open original ↗](${mdDestination(url)})`, "");
 
     await app.vault.create(path, lines.join("\n"));
     return { path, title: finalTitle };
@@ -761,7 +865,8 @@ const addBtn = searchContainer.createEl("button", {
     cls: "bv-round-btn",
     attr: {
         style: ADD_BTN_STYLE,
-        title: "Add a bookmark from a link"
+        title: "Add a bookmark from a link",
+        "aria-label": "Add a bookmark from a link"
     }
 });
 addBtn.innerHTML = PLUS_ICON_SVG;
@@ -792,7 +897,7 @@ const newUrlInput = creatorRow.createEl("input", {
 const folderSelect = creatorRow.createEl("select", {
     cls: "bv-add-select",
     attr: {
-        style: `flex: 0 1 auto; min-width: 150px; max-width: 220px; height: 36px; box-sizing: border-box; padding: 0 30px 0 10px; border-radius: 8px; border: 1px solid ${COLORS.border}; background-color: ${COLORS.leftPanelBg}; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM1ZWVhZDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4="); background-repeat: no-repeat; background-position: right 9px center; appearance: none; -webkit-appearance: none; color: ${COLORS.description}; font-size: 0.9em; font-family: inherit; outline: none;`,
+        style: `flex: 0 1 auto; min-width: 150px; max-width: 220px; height: 36px; box-sizing: border-box; padding: 0 30px 0 10px; border-radius: 8px; border: 1px solid ${COLORS.border}; background-color: ${COLORS.leftPanelBg}; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNhNzhiZmEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4="); background-repeat: no-repeat; background-position: right 9px center; appearance: none; -webkit-appearance: none; color: ${COLORS.description}; font-size: 0.9em; font-family: inherit; outline: none;`,
         title: "Collection for the new bookmark"
     }
 });
@@ -812,7 +917,7 @@ const createBtn = creatorRow.createEl("button", {
     cls: "bv-add-btn",
     text: "Add",
     attr: {
-        style: `flex-shrink: 0; height: 36px; box-sizing: border-box; padding: 0 16px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: rgba(94, 234, 212, 0.12); color: ${COLORS.title}; cursor: pointer; font-size: 0.9em; touch-action: manipulation;`,
+        style: `flex-shrink: 0; height: 36px; box-sizing: border-box; padding: 0 16px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: rgba(167, 139, 250, 0.12); color: ${COLORS.title}; cursor: pointer; font-size: 0.9em; touch-action: manipulation;`,
         title: "Fetch the page and create the note"
     }
 });
@@ -821,7 +926,8 @@ const cancelBtn = creatorRow.createEl("button", {
     cls: "bv-round-btn",
     attr: {
         style: `flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 36px; width: 36px; box-sizing: border-box; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`,
-        title: "Close"
+        title: "Close",
+        "aria-label": "Close the add panel"
     }
 });
 cancelBtn.innerHTML = CLOSE_ICON_SVG;
@@ -901,13 +1007,14 @@ async function finishCreate(meta) {
     createBtn.setText("Saving…");
     try {
         const note = await createBookmarkNote({ ...meta, folder });
-        addedThisSession.set(meta.url.replace(/\/+$/, "").toLowerCase(), { title: note.title, folder });
+        addedThisSession.set(urlKey(meta.url), { title: note.title, folder });
         resetCreator();
         setCreateStatus(`Saved “${note.title}”.`);
         newUrlInput.focus();
     } catch (e) {
         console.error("Bookmark Viewer: could not create the note", e);
         creating = false;
+        createBtn.setText(manualMode ? "Save" : "Add");
         setCreateStatus(`Could not save the note: ${e.message || e}`, true);
     }
 }
@@ -1001,6 +1108,7 @@ const resultsContainer = dv.container.createEl("div", { cls: "bv-results" });
 
 function renderAll(searchTerm) {
     resultsContainer.empty();
+    if (coverObserver) coverObserver.disconnect();
 
     const filtered = filterAndSort(searchTerm);
     const tokens = searchTerm ? tokenize(searchTerm) : [];
@@ -1008,7 +1116,7 @@ function renderAll(searchTerm) {
     if (searchTerm) {
         summaryEl.setText(`${filtered.length} bookmark${filtered.length === 1 ? '' : 's'} found for "${searchTerm}"`);
     } else {
-        summaryEl.setText("");
+        summaryEl.setText(`${pages.length} bookmark${pages.length === 1 ? '' : 's'}`);
     }
 
     if (searchTerm && filtered.length === 0) {
