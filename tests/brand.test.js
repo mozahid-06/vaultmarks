@@ -147,8 +147,8 @@ test('README screenshots exist at their declared sizes', async () => {
   assert.ok(social.length < 1024 * 1024, `social preview is ${social.length} bytes`);
 });
 
-test('phone capture is a tall 390px-wide view', async () => {
-  assert.deepEqual(pngSize(await readBuffer('docs/brand/phone.png')), [780, 2178]);
+test('phone capture is a 390px-wide view cropped after the fourth card', async () => {
+  assert.deepEqual(pngSize(await readBuffer('docs/brand/phone.png')), [780, 1508]);
 });
 
 test('README leads with the brand assets and tagline', async () => {
@@ -158,7 +158,10 @@ test('README leads with the brand assets and tagline', async () => {
   }
   assert.ok(md.includes('Save on desktop. Read on your phone. Keep the files.'));
 
-  const images = [...md.matchAll(/!\[[^\]]*\]\((docs\/[^)\s]+)\)/g)].map((m) => m[1]);
+  const images = [
+    ...md.matchAll(/!\[[^\]]*\]\((docs\/[^)\s]+)\)/g),
+    ...md.matchAll(/<img[^>]+src="(docs\/[^"]+)"/g),
+  ].map((m) => m[1]);
   for (const image of images) {
     await assert.doesNotReject(read(image), `README image does not exist: ${image}`);
   }

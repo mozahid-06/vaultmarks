@@ -108,8 +108,8 @@ try {
   });
   await page.waitForSelector('.bv-card', { state: 'visible' });
 
-  // Covers load when near the viewport; walk the page so the full-page shot
-  // has every image rather than empty tiles.
+  // Covers load when near the viewport; walk the page so every visible card
+  // has its image rather than an empty tile.
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += 300) {
       window.scrollTo(0, y);
@@ -120,8 +120,19 @@ try {
   await page.waitForFunction(() =>
     [...document.querySelectorAll('.bv-thumb img')].every((image) => image.complete));
 
-  await page.screenshot({ path: output, fullPage: true });
-  console.log(output);
+  // The README shows this at phone width, so a full-page shot six cards long
+  // would run most of a screen down the page. Stop just below the last card
+  // that fits inside the compact budget; the cut lands after a card, never
+  // through one.
+  const clip = await page.evaluate(() => {
+    const bottoms = [...document.querySelectorAll('.bv-card')]
+      .map((card) => Math.round(card.getBoundingClientRect().bottom + scrollY));
+    const cut = Math.max(0, ...bottoms.filter((bottom) => bottom <= 800));
+    return { x: 0, y: 0, width: 390, height: cut + 6 };
+  });
+
+  await page.screenshot({ path: output, clip });
+  console.log(output, clip);
 } finally {
   await browser.close();
 }

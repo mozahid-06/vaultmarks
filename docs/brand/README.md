@@ -93,7 +93,7 @@ file.
 | `social-preview.svg` | 1280×640 | Source for the social preview |
 | `social-preview.png` | 1280×640 | GitHub social preview upload |
 | `panel.png` | 1560×1200 (780×600 at 2×) | Real extension panel, dark scheme |
-| `phone.png` | 780×2178 (390px at 2×) | Viewer at phone width; folders are expanded for the capture |
+| `phone.png` | 780×1508 (390×754 at 2×) | Viewer at phone width, cropped after the fourth card; folders are expanded for the capture |
 
 The PNGs are committed so the README does not depend on a build. The SVGs are
 the editable sources.
@@ -117,7 +117,8 @@ PLAYWRIGHT_MODULE=/path/to/playwright \
   `src/library/library.html` in dark mode at 780×600, 2×.
 - `capture-phone.mjs` extracts the first `dataviewjs` block from
   `obsidian/vaultmarks.md`, runs it against a mock `dv` and `app`, and captures
-  the full page at 390px wide, 2×.
+  390px wide at 2×, cropped just below the fourth card so the README shows a
+  phone-sized screen instead of the whole library.
 - Neither harness is part of `npm test`; `node --test tests/brand.test.js`
   checks the committed dimensions instead.
 

@@ -20,7 +20,9 @@ no database: the files are the product.
 
 ## Two places, one library
 
-![The Vaultmarks viewer at phone width](docs/brand/phone.png)
+<img src="docs/brand/phone.png" alt="The Vaultmarks viewer at phone width" width="390">
+
+*The viewer at phone width: search, nested collections and editable cards.*
 
 On the desktop, one click captures the page: title, URL, description, cover,
 favicon and tags. The note lands in the collection you choose, in the same
