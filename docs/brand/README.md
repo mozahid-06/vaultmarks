@@ -4,6 +4,9 @@ Vaultmarks is a Chromium extension first: you save the page you are on, and it
 becomes a Markdown note in your Obsidian vault. This folder holds the artwork
 and the rules that keep every surface looking like the same product.
 
+The code and the artwork in this repository are licensed under the GNU
+General Public License v3.0. See [`../../LICENSE`](../../LICENSE).
+
 ## The mark
 
 The mark is the faceted dark shard on the left and the nested violet bookmarks

@@ -282,6 +282,17 @@ There are no host permissions and no background service worker.
 | The viewer note shows the code block instead of the library | Enable Dataview, then turn on **Enable JavaScript Queries** in its settings. |
 | The viewer shows "0 bookmarks" | The notes are not in a top-level `Bookmarks` folder; point `dv.pages('"Bookmarks"')` at your store. |
 
+## License
+
+Vaultmarks is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3**. It is distributed
+in the hope that it will be useful, but **without any warranty**, without even
+the implied warranty of merchantability or fitness for a particular purpose.
+
+The full terms are in [`LICENSE`](LICENSE). If you distribute a modified
+version, the GPL requires you to make the corresponding source available under
+the same license.
+
 ## Repository layout
 
 | Path | Contents |

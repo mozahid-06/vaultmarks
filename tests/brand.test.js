@@ -161,3 +161,13 @@ test('manifest description matches the product line', async () => {
     'A Chromium bookmark extension that saves each bookmark as a Markdown note in your Obsidian vault — capture on desktop, read on your phone.',
   );
 });
+
+test('the repository is licensed GPL-3.0 and says so', async () => {
+  const license = await read('LICENSE');
+  assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
+  assert.match(license, /Version 3, 29 June 2007/);
+  const pkg = JSON.parse(await read('package.json'));
+  assert.equal(pkg.license, 'GPL-3.0-only');
+  const readme = await read('README.md');
+  assert.match(readme, /GNU General Public License/);
+});
