@@ -18,6 +18,7 @@ import {
 } from '../lib/vaultfs.js';
 import { buildIndex, filterNotes, sortNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
 import { createNoteText, filenameBase } from '../lib/markdown.js';
+import { faviconSources, faviconLetter } from '../lib/favicon.js';
 import { dirOf, baseOf, isUnder, remapPath, dropDestination } from '../lib/paths.js';
 import { isSavableUrl, savePrefill, captureActiveTab } from '../lib/capture.js';
 import { isTabView } from '../lib/view.js';
@@ -244,17 +245,27 @@ function renderSidebar() {
 }
 
 function faviconTile(note) {
-  const domain = domainOf(note.url);
-  const own = typeof note.favicon === 'string' && /^https?:/i.test(note.favicon) ? note.favicon : '';
-  // Notes saved before Vaultmarks have no favicon field, and Chrome's cached
-  // favicon only exists for pages this profile has visited. Ask Google for the
-  // site's icon in that case, then keep Chrome's endpoint as the last resort.
-  const remote = domain
-    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`
-    : '';
-  const cached = faviconUrl(note.url, 32);
-  const sources = [own, remote, cached].filter(Boolean);
-  const image = h('img', { alt: '', src: sources[0] ?? cached });
+  // A letter tile beats a blank or broken image; the sources put the note's own
+  // icon first, then the two services, then Chrome's cache.
+  const sources = faviconSources(note, faviconUrl(note.url, 32));
+  const wrap = h('div', { className: 'favicon-tile' });
+
+  const letter = () => {
+    wrap.replaceChildren(
+      h('span', {
+        className: 'favicon-letter',
+        text: faviconLetter(note),
+        'aria-hidden': 'true',
+      }),
+    );
+  };
+
+  if (sources.length === 0) {
+    letter();
+    return wrap;
+  }
+
+  const image = h('img', { alt: '', src: sources[0] });
   let next = 1;
   image.addEventListener('error', () => {
     if (next < sources.length) {
@@ -262,9 +273,12 @@ function faviconTile(note) {
       next += 1;
     } else {
       image.onerror = null;
+      image.remove();
+      letter();
     }
   });
-  return h('div', { className: 'favicon-tile' }, image);
+  wrap.append(image);
+  return wrap;
 }
 
 function coverElement(note) {

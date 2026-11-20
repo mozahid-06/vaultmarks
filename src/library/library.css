@@ -435,6 +435,22 @@ button.danger:hover:not(:disabled) {
   width: 20px;
   height: 20px;
   object-fit: contain;
+  border-radius: 4px;
+}
+
+.favicon-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
 }
 
 .row-body {
