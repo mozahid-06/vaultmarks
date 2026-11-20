@@ -719,6 +719,12 @@ body.scanning .wordmark::after {
   text-overflow: ellipsis;
 }
 
+.tag-menu-note {
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .tag-option svg {
   flex: none;
   width: 12px;

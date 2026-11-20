@@ -93,7 +93,7 @@ function setup({ initial = [], suggestions = [], exclude = [] } = {}) {
   return { field, input, chips, handle, menu };
 }
 
-const label = (node) => node.children.map((child) => child.textContent).filter(Boolean).join(' ');
+const label = (node) => node.textContent || node.children.map((child) => child.textContent).filter(Boolean).join(' ');
 
 test('re-creating the tag input on one element leaves the newest instance authoritative', () => {
   const field = new FakeNode('div');
@@ -161,7 +161,7 @@ test('typing an unknown tag offers a create row and Enter creates it', () => {
 
   input.value = 'zig';
   input.dispatch('input');
-  assert.deepEqual(menu.children.map(label), ['Create “zig”']);
+  assert.deepEqual(menu.children.map(label), ['No tags match “zig”', 'Create “zig”']);
 
   input.dispatch('keydown', { key: 'Enter' });
 

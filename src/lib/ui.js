@@ -204,8 +204,7 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
     const rows = matches.map((name) => ({ value: name, create: false }));
     if (canCreate) rows.push({ value: query, create: true });
 
-    options = rows.map((row, index) => {
-      const node = h(
+    options = rows.map((row, index) => {      const node = h(
         'div',
         {
           className: 'tag-option',
@@ -228,7 +227,15 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
       return { ...row, node };
     });
 
-    menu.replaceChildren(...options.map((option) => option.node));
+    const hint = lower !== '' && matches.length === 0
+      ? h('div', {
+          className: 'tag-menu-note',
+          role: 'presentation',
+          text: known.length === 0 ? 'No tags yet' : `No tags match “${query}”`,
+        })
+      : null;
+
+    menu.replaceChildren(...[hint, ...options.map((option) => option.node)].filter(Boolean));
     menu.hidden = false;
     positionMenu();
     input.setAttribute('aria-expanded', 'true');
