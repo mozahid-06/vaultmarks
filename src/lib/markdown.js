@@ -151,8 +151,8 @@ function quoteScalar(value) {
 function markdownDestination(value) {
   const raw = String(value ?? '').trim();
   if (raw === '') return '';
-  if (!/[\s()<>]/.test(raw)) return raw;
-  return `<${raw.replace(/</g, '%3C').replace(/>/g, '%3E').replace(/\s/g, '%20')}>`;
+  if (!/[\s()<>\\]/.test(raw)) return raw;
+  return `<${raw.replace(/[<>\\]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`).replace(/\s/g, '%20')}>`;
 }
 
 function normalizeTags(tags) {
