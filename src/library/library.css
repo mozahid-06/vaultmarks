@@ -436,7 +436,7 @@ button.danger:hover:not(:disabled) {
   height: 20px;
   object-fit: contain;
   border-radius: 5px;
-  background: #f1f5f9;
+  background: #cbd5e1;
   padding: 2px;
   box-sizing: border-box;
 }
