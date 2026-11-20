@@ -130,3 +130,34 @@ test('phone capture is a tall 390px-wide view', async () => {
   assert.equal(width, 780);
   assert.ok(height > 1200, `phone capture is ${width}x${height}`);
 });
+
+test('README leads with the brand assets and tagline', async () => {
+  const md = await read('README.md');
+  for (const path of ['docs/brand/banner.svg', 'docs/brand/panel.png', 'docs/brand/phone.png']) {
+    assert.ok(md.includes(path), `README is missing ${path}`);
+  }
+  assert.ok(md.includes('Save on desktop. Read on your phone. Keep the files.'));
+
+  const images = [...md.matchAll(/!\[[^\]]*\]\((docs\/[^)\s]+)\)/g)].map((m) => m[1]);
+  for (const image of images) {
+    await assert.doesNotReject(read(image), `README image does not exist: ${image}`);
+  }
+});
+
+test('brand guide documents the palette and capture commands', async () => {
+  const guide = await read('docs/brand/README.md');
+  for (const hex of ['#0c0a14', '#6d4ae0', '#a78bfa', '#c4b5fd', '#5a3fd1', '#2dd4bf']) {
+    assert.ok(guide.includes(hex), `brand guide is missing ${hex}`);
+  }
+  assert.ok(guide.includes('docs/brand/tools/capture-panel.mjs'));
+  assert.ok(guide.includes('docs/brand/tools/capture-phone.mjs'));
+  assert.ok(guide.includes('PLAYWRIGHT_MODULE'));
+});
+
+test('manifest description matches the product line', async () => {
+  const manifest = JSON.parse(await read('manifest.json'));
+  assert.equal(
+    manifest.description,
+    'A Chromium bookmark extension that saves each bookmark as a Markdown note in your Obsidian vault — capture on desktop, read on your phone.',
+  );
+});

@@ -1,9 +1,37 @@
+![Vaultmarks](docs/brand/banner.svg)
+
 # Vaultmarks
 
-A minimal, Raindrop-style bookmark library that stores every bookmark as a
-Markdown note in your Obsidian vault. No server, no helper process, no
-account: the extension talks to the folder you pick, and Obsidian shows the
-full details of every bookmark.
+**Save on desktop. Read on your phone. Keep the files.**
+
+![Chromium MV3](https://img.shields.io/badge/Chromium-MV3-6d4ae0?style=flat-square)
+![No server](https://img.shields.io/badge/server-none-14101f?style=flat-square)
+![Obsidian](https://img.shields.io/badge/Obsidian-vault-a78bfa?style=flat-square)
+![Markdown](https://img.shields.io/badge/storage-Markdown-c4b5fd?style=flat-square)
+
+Vaultmarks saves the page you are on as a Markdown note in your Obsidian vault,
+from the Chromium toolbar. The same folder opens as a searchable library inside
+Obsidian, so the phone is a first-class reading surface. No server, no account,
+no database: the files are the product.
+
+![The Vaultmarks panel in dark mode](docs/brand/panel.png)
+
+*The panel in dark mode: collections on the left, saved bookmarks on the right.*
+
+## Two places, one library
+
+![The Vaultmarks viewer at phone width](docs/brand/phone.png)
+
+On the desktop, one click captures the page: title, URL, description, cover,
+favicon and tags. The note lands in the collection you choose, in the same
+format the Obsidian Web Clipper uses.
+
+On the phone, open `obsidian/vaultmarks.md` in Obsidian. The viewer block reads
+the same folder: search, nested collections, covers, edit and fast add, with
+nothing to install beyond Dataview. Every bookmark stays a plain `.md` file, so
+Obsidian Sync, git or any backup tool carries it.
+
+## What you get
 
 - **Panel** — the toolbar icon opens a two-pane panel: a collections sidebar
   and the bookmark list with search, sorting and keyboard navigation, sized
@@ -264,7 +292,7 @@ There are no host permissions and no background service worker.
 | `icons/` | Toolbar and store icons. |
 | `obsidian/` | The DataviewJS viewer page. |
 | `tests/` | `node --test` suites. |
-| `docs/` | Design notes and the manual test checklist. |
+| `docs/` | Design notes, the manual test checklist, and `docs/brand/` with the logo assets, screenshots and guide. |
 
 ## Development
 
@@ -287,3 +315,6 @@ extension pages (no inline scripts/handlers, wiring ids present).
 
 `docs/manual-test-checklist.md` holds the parts a test cannot cover: the
 folder picker, real writes in Chromium, and Obsidian rendering.
+
+Brand assets, the palette and the voice rules live in
+[`docs/brand/README.md`](docs/brand/README.md).

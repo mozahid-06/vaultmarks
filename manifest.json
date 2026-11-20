@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vaultmarks",
-  "description": "A minimal bookmark library stored as Markdown notes in your Obsidian vault.",
+  "description": "A Chromium bookmark extension that saves each bookmark as a Markdown note in your Obsidian vault — capture on desktop, read on your phone.",
   "version": "0.1.0",
   "permissions": ["activeTab", "scripting", "favicon", "storage"],
   "action": {
