@@ -19,6 +19,7 @@ test('library has no inline script or handlers and the wiring ids exist', async 
   for (const id of [
     'onboarding', 'reconnect', 'sidebar', 'all', 'collections', 'search', 'list', 'empty',
     'new-bookmark', 'new-blank', 'settings', 'detail',
+    'sort', 'tag-filter', 'confirm', 'confirm-heading', 'confirm-message', 'confirm-yes', 'confirm-no',
     'detail-title', 'detail-url', 'detail-description', 'detail-tags', 'detail-collection',
     'field-title', 'field-url', 'field-description', 'field-tags', 'detail-form-note',
     'detail-save', 'detail-cancel', 'detail-open', 'detail-edit', 'detail-delete',

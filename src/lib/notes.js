@@ -32,6 +32,25 @@ export function sortNewest(notes) {
   });
 }
 
+const titleCompare = (a, b) =>
+  String(a.title ?? '').toLowerCase().localeCompare(String(b.title ?? '').toLowerCase());
+
+export function sortNotes(notes, mode = 'newest') {
+  if (mode === 'oldest') {
+    return [...notes].sort((a, b) => {
+      const byDate = String(a.created ?? '').localeCompare(String(b.created ?? ''));
+      return byDate !== 0 ? byDate : titleCompare(a, b);
+    });
+  }
+  if (mode === 'title') {
+    return [...notes].sort((a, b) => {
+      const byTitle = titleCompare(a, b);
+      return byTitle !== 0 ? byTitle : String(b.created ?? '').localeCompare(String(a.created ?? ''));
+    });
+  }
+  return sortNewest(notes);
+}
+
 function sortTree(nodes) {
   nodes.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   for (const node of nodes) sortTree(node.children);
@@ -93,10 +112,14 @@ export function buildIndex(notes, directories = []) {
   return { notes: ordered, collections: sortTree(roots), tags, byKey, byUrl };
 }
 
-export function filterNotes(index, { collection = '', query = '' } = {}) {
+export function filterNotes(index, { collection = '', query = '', tag = '' } = {}) {
   const tokens = String(query ?? '').toLowerCase().split(/\s+/).filter((token) => token !== '');
+  const wantedTag = String(tag ?? '').trim().toLowerCase();
   return index.notes.filter((note) => {
     if (collection !== '' && note.dir !== collection && !note.dir.startsWith(`${collection}/`)) {
+      return false;
+    }
+    if (wantedTag !== '' && !note.tags.some((value) => String(value).trim().toLowerCase() === wantedTag)) {
       return false;
     }
     if (tokens.length === 0) return true;

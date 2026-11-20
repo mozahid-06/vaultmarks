@@ -6,9 +6,10 @@ account: the extension talks to the folder you pick, and Obsidian shows the
 full details of every bookmark.
 
 - **Panel** — the toolbar icon opens a two-pane panel: a collections sidebar
-  and the bookmark list with search, sized for a Chromium popup (780×600).
-  **Save page** captures the page you are on (title, URL, description, cover,
-  favicon, tags); the **+** next to the search box saves it in one step.
+  and the bookmark list with search, sorting and keyboard navigation, sized
+  for a Chromium popup (780×600). **Save page** captures the page you are on
+  (title, URL, description, cover, favicon, tags); the **+** next to the
+  search box saves it in one step.
 - **Tab** — the expand button opens the same page as a full-width tab; the
   panel and the tab are one codebase and one dataset, so they can never drift.
 - **Obsidian view** — `obsidian/vaultmarks.md` is a ready-made DataviewJS
@@ -89,18 +90,29 @@ hand.
 are the same page: search, list and detail are identical. The tab hides
 **Save page** and **+** because there is no page to capture there; **New**
 still works. Type in the search box (or press <kbd>/</kbd>) to filter by
-title, description, URL, domain or tags; <kbd>Esc</kbd> clears it. Click a
-collection in the sidebar to filter by folder. Hover a row for three actions:
+title, description, URL, domain or tags; matches are highlighted and
+<kbd>Esc</kbd> clears them. Click a collection in the sidebar to filter by
+folder. The sort control in the list header switches between **Newest**,
+**Oldest** and **Title A–Z**, and remembers the choice. Click a tag in a
+bookmark's details to see everything with that tag; the chip in the header
+clears the tag filter.
+
+**Keyboard.** <kbd>/</kbd> search · <kbd>↑</kbd>/<kbd>↓</kbd> select ·
+<kbd>Enter</kbd> details · <kbd>e</kbd> edit · <kbd>d</kbd> delete ·
+<kbd>n</kbd> new · <kbd>Home</kbd>/<kbd>End</kbd> first/last ·
+<kbd>Esc</kbd> clear the selection or filters.
+
+Hover a row for three actions:
 
 - **Details** — cover, title, URL, description, date, tags and collection,
   with **Open**, **Copy link**, **Edit**, **Move to...**, **Delete**,
   **Open in Obsidian** and **Close**.
 - **Edit** — change the title (this renames the file), URL, description,
   tags or collection.
-- **Delete** — moves the note to the hidden `.vaultmarks-trash` folder
-  inside the store; nothing is hard-deleted.
+- **Delete** — asks in a small panel dialog, then moves the note to the hidden
+  `.vaultmarks-trash` folder inside the store; nothing is hard-deleted.
 
-**+ New** (top of the list) creates a note by hand. **+** next to
+**New** in the list header creates a note by hand. **+** next to
 *Collections* creates a folder at the store root. Collections are plain
 folders, so folders made in Obsidian appear here too. Drag a collection row
 onto another one to nest it, or onto **All bookmarks** to move it back to the

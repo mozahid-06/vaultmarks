@@ -4,6 +4,7 @@ const DEFAULTS = {
   storeLabel: '',
   obsidianLinks: false,
   lastCollection: '',
+  sort: 'newest',
 };
 
 export async function getSettings() {

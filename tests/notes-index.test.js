@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildIndex, filterNotes, sortNewest, normalizeUrl, domainOf,
+  buildIndex, filterNotes, sortNewest, sortNotes, normalizeUrl, domainOf,
   findByUrl, formatDate, obsidianUri, BASE_TAG,
 } from '../src/lib/notes.js';
 
@@ -51,6 +51,35 @@ test('filterNotes matches collection prefixes and every search token', () => {
   assert.deepEqual(filterNotes(index, { collection: '', query: 'typed javascript' }).map((n) => n.title), ['TypeScript']);
   assert.deepEqual(filterNotes(index, { collection: '', query: 'design tool' }).map((n) => n.title), ['Figma']);
   assert.deepEqual(filterNotes(index, { collection: '', query: 'nothing-here' }), []);
+});
+
+test('filterNotes narrows by tag and combines it with collection and query', () => {
+  const index = buildIndex(notes);
+  assert.deepEqual(filterNotes(index, { tag: 'design' }).map((n) => n.title), ['Figma']);
+  assert.deepEqual(filterNotes(index, { tag: 'DESIGN' }).map((n) => n.title), ['Figma']);
+  assert.deepEqual(filterNotes(index, { tag: 'frontend' }).map((n) => n.title), ['React']);
+  assert.deepEqual(filterNotes(index, { collection: 'Development', tag: 'frontend' }).map((n) => n.title), ['React']);
+  assert.deepEqual(filterNotes(index, { collection: 'Design', tag: 'frontend' }), []);
+  assert.deepEqual(filterNotes(index, { query: 'typescript', tag: 'design' }), []);
+  assert.deepEqual(filterNotes(index, { tag: 'missing' }), []);
+});
+
+test('sortNotes orders by newest, oldest and title', () => {
+  assert.deepEqual(sortNotes(notes).map((n) => n.title), ['React', 'TypeScript', 'Figma']);
+  assert.deepEqual(sortNotes(notes, 'newest').map((n) => n.title), ['React', 'TypeScript', 'Figma']);
+  assert.deepEqual(sortNotes(notes, 'oldest').map((n) => n.title), ['Figma', 'TypeScript', 'React']);
+  assert.deepEqual(sortNotes(notes, 'title').map((n) => n.title), ['Figma', 'React', 'TypeScript']);
+  assert.deepEqual(sortNotes(notes, 'nonsense').map((n) => n.title), ['React', 'TypeScript', 'Figma']);
+  assert.deepEqual(notes.map((n) => n.title), ['React', 'TypeScript', 'Figma']);
+});
+
+test('sortNotes breaks date ties with the title', () => {
+  const tied = [
+    note({ key: 'b.md', title: 'Beta', created: '2026-01-01' }),
+    note({ key: 'a.md', title: 'Alpha', created: '2026-01-01' }),
+  ];
+  assert.deepEqual(sortNotes(tied, 'newest').map((n) => n.title), ['Alpha', 'Beta']);
+  assert.deepEqual(sortNotes(tied, 'oldest').map((n) => n.title), ['Alpha', 'Beta']);
 });
 
 test('sortNewest orders by created desc then title', () => {

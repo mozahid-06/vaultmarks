@@ -56,7 +56,18 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] Sidebar counts match: **All bookmarks** 239, and the collection counts
       add up (e.g. `Development` includes its subfolders).
 - [ ] Search filters by title, description, domain and tag; <kbd>Esc</kbd>
-      clears it; <kbd>/</kbd> focuses the box.
+      clears it; <kbd>/</kbd> focuses the box. Matches are highlighted.
+- [ ] Sort switches between Newest, Oldest and Title A–Z; reopening the panel
+      keeps the chosen order.
+- [ ] Clicking a tag in a bookmark's details filters to that tag, the header
+      shows a `#tag` chip, and clicking the chip clears the filter.
+- [ ] <kbd>↑</kbd>/<kbd>↓</kbd> move the highlighted row, <kbd>Home</kbd>/
+      <kbd>End</kbd> jump to the ends, <kbd>Enter</kbd> opens details,
+      <kbd>e</kbd> edits, <kbd>d</kbd> deletes, <kbd>n</kbd> opens the new
+      form, and <kbd>Esc</kbd> clears the selection or filters. Typing in the
+      search box does not trigger these.
+- [ ] An empty search or empty collection shows an explanation and action
+      buttons; **Clear filters** returns the full list.
 - [ ] Clicking a collection filters the list; clicking a row title opens the
       URL in a new tab.
 - [ ] Switching away and back to the tab refreshes the list.
@@ -112,8 +123,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] Editing the title renames the file on disk; the description and tags
       patch only the frontmatter (body untouched).
 - [ ] **Move to…** changes the folder on disk.
-- [ ] Delete asks for confirmation and moves the note into
-      `.vaultmarks-trash`; the file is gone from its old location.
+- [ ] Delete opens the panel's own confirmation dialog (not the browser's);
+      **Cancel** and <kbd>Esc</kbd> leave the note in place, and **Move to
+      trash** puts it in `.vaultmarks-trash`; the file is gone from its old
+      location.
 - [ ] **+** (quick save) and **New** both write the exact frontmatter shape
       (`title`, `url`, `created`, `description`, optional `image` / `favicon`,
       `tags` with `bookmarks`, blank line, cover, description,

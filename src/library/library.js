@@ -16,7 +16,7 @@ import {
   trashFile,
   writeNewFile,
 } from '../lib/vaultfs.js';
-import { buildIndex, filterNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
+import { buildIndex, filterNotes, sortNotes, formatDate, domainOf, obsidianUri, findByUrl, BASE_TAG } from '../lib/notes.js';
 import { createNoteText, filenameBase } from '../lib/markdown.js';
 import { dirOf, baseOf, isUnder, remapPath, dropDestination } from '../lib/paths.js';
 import { isSavableUrl, savePrefill, captureActiveTab } from '../lib/capture.js';
@@ -38,6 +38,10 @@ const state = {
   index: null,
   collection: '',
   query: '',
+  tag: '',
+  sort: 'newest',
+  selected: null,
+  notes: [],
   skipped: 0,
   generation: 0,
   dialogOpen: false,
@@ -141,6 +145,7 @@ function selectCollection(path) {
 
 function titleFor() {
   if (state.query !== '') return 'Search results';
+  if (state.tag !== '') return `Tagged ${state.tag}`;
   if (state.collection === '') return 'All bookmarks';
   return state.collection.slice(state.collection.lastIndexOf('/') + 1);
 }
@@ -231,7 +236,7 @@ function renderSidebar() {
     sidebarButton({
       label: 'All bookmarks',
       count: total,
-      active: state.collection === '' && state.query === '',
+      active: state.collection === '' && state.query === '' && state.tag === '',
       onClick: () => selectCollection(''),
     }),
   );
@@ -277,19 +282,67 @@ function rowAction(action, iconName, label, note) {
   );
 }
 
-function renderRow(note) {
+function queryTokens() {
+  return state.query.toLowerCase().split(/\s+/).filter((token) => token !== '');
+}
+
+// Split `text` into plain strings and <mark> nodes for every search token,
+// merging overlapping ranges so nested matches stay a single highlight.
+function highlightParts(text, tokens) {
+  const value = String(text ?? '');
+  if (value === '' || tokens.length === 0) return [value];
+  const lower = value.toLowerCase();
+  const ranges = [];
+  for (const token of tokens) {
+    let from = 0;
+    while (token !== '' && from <= lower.length - token.length) {
+      const at = lower.indexOf(token, from);
+      if (at === -1) break;
+      ranges.push([at, at + token.length]);
+      from = at + token.length;
+    }
+  }
+  if (ranges.length === 0) return [value];
+  ranges.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  const merged = [];
+  for (const [start, end] of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
+  }
+  const parts = [];
+  let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor) parts.push(value.slice(cursor, start));
+    parts.push(h('mark', { text: value.slice(start, end) }));
+    cursor = end;
+  }
+  if (cursor < value.length) parts.push(value.slice(cursor));
+  return parts;
+}
+
+function renderRow(note, tokens) {
   return h(
     'article',
-    { className: 'row', dataset: { key: note.key } },
+    {
+      className: `row${note.key === state.selected ? ' selected' : ''}`,
+      dataset: { key: note.key },
+      onclick: () => {
+        if (state.selected === note.key) return;
+        state.selected = note.key;
+        paintSelection();
+      },
+    },
     coverElement(note),
     h(
       'div',
       { className: 'row-body' },
       h(
         'a',
-        { className: 'row-title', href: note.url, target: '_blank', rel: 'noreferrer', text: note.title },
+        { className: 'row-title', href: note.url, target: '_blank', rel: 'noreferrer' },
+        ...highlightParts(note.title, tokens),
       ),
-      note.description ? h('p', { className: 'row-desc', text: note.description }) : null,
+      note.description ? h('p', { className: 'row-desc' }, ...highlightParts(note.description, tokens)) : null,
       h(
         'div',
         { className: 'row-meta' },
@@ -308,16 +361,121 @@ function renderRow(note) {
   );
 }
 
+function paintSelection(scroll = false) {
+  const rows = [...el('list').children];
+  for (const row of rows) {
+    row.classList.toggle('selected', state.selected != null && row.dataset.key === state.selected);
+  }
+  if (scroll && state.selected != null) {
+    rows.find((row) => row.dataset.key === state.selected)?.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function selectedNote() {
+  return state.notes.find((note) => note.key === state.selected) ?? null;
+}
+
+function moveSelection(delta) {
+  const notes = state.notes;
+  if (notes.length === 0) return;
+  const index = notes.findIndex((note) => note.key === state.selected);
+  const next = index === -1
+    ? (delta > 0 ? 0 : notes.length - 1)
+    : Math.min(notes.length - 1, Math.max(0, index + delta));
+  state.selected = notes[next].key;
+  paintSelection(true);
+}
+
+function jumpSelection(edge) {
+  const notes = state.notes;
+  if (notes.length === 0) return;
+  state.selected = (edge === 'start' ? notes[0] : notes[notes.length - 1]).key;
+  paintSelection(true);
+}
+
+function clearFilters() {
+  clearTimeout(searchTimer);
+  state.query = '';
+  state.tag = '';
+  el('search').value = '';
+  renderSidebar();
+  renderList();
+}
+
+function renderTagFilter() {
+  const chip = el('tag-filter');
+  chip.hidden = state.tag === '';
+  if (state.tag === '') {
+    chip.replaceChildren();
+    return;
+  }
+  chip.replaceChildren(
+    h('span', { text: `#${state.tag}` }),
+    h('span', { className: 'tag-x', text: '×' }),
+  );
+  chip.title = `Show all bookmarks instead of ${state.tag}`;
+  chip.setAttribute('aria-label', `Clear tag filter ${state.tag}`);
+}
+
+function renderEmpty(notes) {
+  const empty = el('empty');
+  empty.hidden = notes.length > 0;
+  if (notes.length > 0) {
+    empty.replaceChildren();
+    return;
+  }
+  const total = state.index?.notes.length ?? 0;
+  const filtered = state.query !== '' || state.tag !== '';
+  if (total === 0) {
+    empty.replaceChildren(
+      h('p', { className: 'empty-title', text: 'No bookmarks yet' }),
+      h('p', { text: 'Save the page you are on, or add a bookmark by hand.' }),
+      h(
+        'div',
+        { className: 'empty-actions' },
+        tabView
+          ? null
+          : h('button', { className: 'primary', type: 'button', text: 'Save this page', onclick: onSavePage }),
+        h('button', { type: 'button', text: 'New bookmark', onclick: () => openCreate() }),
+      ),
+    );
+    return;
+  }
+  empty.replaceChildren(
+    h('p', { className: 'empty-title', text: filtered ? 'No matches' : 'Nothing here yet' }),
+    h('p', {
+      text: filtered
+        ? 'Try a different search or clear the filters.'
+        : 'Save a page into this collection, or move a bookmark in.',
+    }),
+    h(
+      'div',
+      { className: 'empty-actions' },
+      filtered ? h('button', { type: 'button', text: 'Clear filters', onclick: clearFilters }) : null,
+      filtered || tabView
+        ? null
+        : h('button', { className: 'primary', type: 'button', text: 'Save this page', onclick: onSavePage }),
+      h('button', { type: 'button', text: 'New bookmark', onclick: () => openCreate() }),
+    ),
+  );
+}
+
 function renderList() {
   const notes = state.index
-    ? filterNotes(state.index, { collection: state.collection, query: state.query })
+    ? sortNotes(
+        filterNotes(state.index, { collection: state.collection, query: state.query, tag: state.tag }),
+        state.sort,
+      )
     : [];
+  state.notes = notes;
+  if (state.selected != null && !notes.some((note) => note.key === state.selected)) state.selected = null;
   el('collection-title').textContent = titleFor();
-  el('list').replaceChildren(...notes.map(renderRow));
-  el('empty').hidden = notes.length > 0;
-  if (notes.length === 0) {
-    el('empty').textContent = (state.index?.notes.length ?? 0) === 0 ? 'No bookmarks yet' : 'No matches';
-  }
+  const tokens = queryTokens();
+  el('list').hidden = notes.length === 0;
+  el('list').replaceChildren(...notes.map((note) => renderRow(note, tokens)));
+  paintSelection();
+  renderTagFilter();
+  renderEmpty(notes);
   if (!document.body.classList.contains('scanning')) {
     el('summary').textContent = `${notes.length} bookmark${notes.length === 1 ? '' : 's'}`;
   }
@@ -394,7 +552,23 @@ function renderDetailView(note) {
   el('detail-date').textContent = [formatDate(note.created), domainOf(note.url)].filter(Boolean).join(' · ');
   el('detail-text').textContent = note.description === '' ? 'No description.' : note.description;
   el('detail-chips').replaceChildren(
-    ...userTags(note.tags).map((tag) => h('span', { className: 'chip' }, h('span', { text: tag }))),
+    ...userTags(note.tags).map((tag) =>
+      h('button', {
+        type: 'button',
+        className: 'chip chip-button',
+        text: tag,
+        title: `Show bookmarks tagged ${tag}`,
+        onclick: () => {
+          state.tag = tag;
+          state.collection = '';
+          state.query = '';
+          el('search').value = '';
+          closeDetail();
+          renderSidebar();
+          renderList();
+        },
+      }),
+    ),
   );
   el('detail-collection-label').textContent = note.dir === '' ? 'Unfiled' : note.dir;
 
@@ -576,10 +750,50 @@ function showConflict(note) {
   );
 }
 
+let confirmResolve = null;
+
+function askConfirm({ heading = 'Move to trash?', message, confirmLabel = 'Move to trash' }) {
+  if (confirmResolve) settleConfirm(false);
+  el('confirm-heading').textContent = heading;
+  el('confirm-message').textContent = message;
+  el('confirm-yes').textContent = confirmLabel;
+  el('confirm').showModal();
+  state.dialogOpen = true;
+  el('confirm-no').focus();
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+  });
+}
+
+function settleConfirm(value) {
+  const resolve = confirmResolve;
+  confirmResolve = null;
+  if (el('confirm').open) el('confirm').close();
+  resolve?.(value);
+}
+
+function wireConfirm() {
+  el('confirm-yes').addEventListener('click', () => settleConfirm(true));
+  el('confirm-no').addEventListener('click', () => settleConfirm(false));
+  el('confirm').addEventListener('cancel', (event) => {
+    event.preventDefault();
+    settleConfirm(false);
+  });
+  el('confirm').addEventListener('close', () => {
+    if (confirmResolve) settleConfirm(false);
+  });
+}
+
 async function deleteNote(note) {
-  if (!window.confirm('Move this bookmark to the hidden trash folder?')) return;
+  const title = note.title || 'this bookmark';
+  const confirmed = await askConfirm({
+    heading: 'Move to trash?',
+    message: `Move “${title}” to the hidden trash folder?`,
+  });
+  if (!confirmed) return;
   try {
     await trashFile(note);
+    if (state.selected === note.key) state.selected = null;
     notifyChanged();
     if (state.currentNote?.key === note.key) closeDetail();
     await refresh();
@@ -958,7 +1172,11 @@ async function renameCollection(node) {
 
 async function deleteCollection(node) {
   const noun = node.count === 1 ? 'bookmark' : 'bookmarks';
-  if (!window.confirm(`Move "${node.name}" and its ${node.count} ${noun} to trash?`)) return;
+  const confirmed = await askConfirm({
+    heading: 'Move collection to trash?',
+    message: `Move “${node.name}” and its ${node.count} ${noun} to trash?`,
+  });
+  if (!confirmed) return;
   try {
     await trashDirectory(node.path);
     for (const p of [...expanded]) if (isUnder(p, node.path)) expanded.delete(p);
@@ -981,22 +1199,94 @@ function onSearchInput() {
   }, 120);
 }
 
+function onSortChange() {
+  state.sort = el('sort').value;
+  renderList();
+  saveSettings({ sort: state.sort })
+    .then((settings) => {
+      state.settings = settings;
+    })
+    .catch(() => {
+      toast('Could not remember the sort order.', 'error');
+    });
+}
+
+function isTyping(target) {
+  return target instanceof HTMLElement
+    && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+}
+
 function onKeydown(event) {
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
   const target = event.target;
-  const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+  const typing = isTyping(target);
+
+  if (state.dialogOpen) return;
+
   if (event.key === '/' && !typing) {
     event.preventDefault();
     el('search').focus();
-  } else if (event.key === 'Escape' && document.activeElement === el('search')) {
-    el('search').value = '';
-    state.query = '';
-    renderSidebar();
-    renderList();
+    return;
+  }
+
+  if (typing) {
+    if (event.key === 'Escape' && target === el('search')) {
+      event.preventDefault();
+      clearFilters();
+      el('search').blur();
+    }
+    return;
+  }
+
+  if (event.key === 'Enter' && target instanceof HTMLElement && target.closest('button, a')) return;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    moveSelection(1);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    moveSelection(-1);
+  } else if (event.key === 'Home') {
+    event.preventDefault();
+    jumpSelection('start');
+  } else if (event.key === 'End') {
+    event.preventDefault();
+    jumpSelection('end');
+  } else if (event.key === 'Enter') {
+    const note = selectedNote();
+    if (note) {
+      event.preventDefault();
+      openDetail(note, 'view');
+    }
+  } else if (event.key === 'e' || event.key === 'E') {
+    const note = selectedNote();
+    if (note) {
+      event.preventDefault();
+      openDetail(note, 'edit');
+    }
+  } else if (event.key === 'd' || event.key === 'D') {
+    const note = selectedNote();
+    if (note) {
+      event.preventDefault();
+      deleteNote(note);
+    }
+  } else if (event.key === 'n' || event.key === 'N') {
+    if (state.index) {
+      event.preventDefault();
+      openCreate();
+    }
+  } else if (event.key === 'Escape') {
+    if (state.selected != null) {
+      state.selected = null;
+      paintSelection();
+    } else if (state.query !== '' || state.tag !== '') {
+      clearFilters();
+    }
   }
 }
 
 function trackDialogs() {
-  for (const id of ['detail', 'settings']) {
+  for (const id of ['detail', 'settings', 'confirm']) {
     el(id).addEventListener('close', () => {
       state.dialogOpen = document.querySelector('dialog[open]') != null;
     });
@@ -1037,8 +1327,15 @@ async function init() {
   });
   el('new-collection').addEventListener('click', newCollection);
   el('search').addEventListener('input', onSearchInput);
+  el('sort').addEventListener('change', onSortChange);
+  el('tag-filter').addEventListener('click', () => {
+    state.tag = '';
+    renderSidebar();
+    renderList();
+  });
   document.addEventListener('keydown', onKeydown);
   trackDialogs();
+  wireConfirm();
   wireDetail();
   wireSidebarDnd();
 
@@ -1051,6 +1348,8 @@ async function init() {
   });
 
   state.settings = await getSettings();
+  state.sort = ['newest', 'oldest', 'title'].includes(state.settings.sort) ? state.settings.sort : 'newest';
+  el('sort').value = state.sort;
   if (!state.settings.storeLabel) {
     showOnboarding();
     return;

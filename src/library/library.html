@@ -43,10 +43,18 @@
         <div class="main-head">
           <h1 id="collection-title">All bookmarks</h1>
           <span id="summary" class="muted"></span>
-          <button id="new-blank" type="button" title="New bookmark">New</button>
+          <button id="tag-filter" class="tag-filter" type="button" hidden></button>
+          <div class="main-head-actions">
+            <select id="sort" class="sort-select" aria-label="Sort bookmarks" title="Sort bookmarks">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="title">Title A–Z</option>
+            </select>
+            <button id="new-blank" type="button" title="New bookmark">New</button>
+          </div>
         </div>
         <div id="list" class="list"></div>
-        <p id="empty" class="empty" hidden></p>
+        <div id="empty" class="empty" hidden></div>
       </main>
     </div>
 
@@ -110,6 +118,15 @@
     <dialog id="settings" class="dialog">
       <h2>Settings</h2>
       <div id="settings-body"></div>
+    </dialog>
+
+    <dialog id="confirm" class="dialog confirm">
+      <h2 id="confirm-heading">Move to trash?</h2>
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="actions">
+        <button id="confirm-yes" class="danger" type="button">Delete</button>
+        <button id="confirm-no" type="button">Cancel</button>
+      </div>
     </dialog>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>

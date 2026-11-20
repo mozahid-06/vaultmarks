@@ -62,6 +62,16 @@ button.primary {
   font-weight: 560;
 }
 
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+button.danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -265,7 +275,7 @@ button.primary {
 
 .main-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -273,15 +283,72 @@ button.primary {
 .main-head h1 {
   font-size: 19px;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .main-head .muted {
   color: var(--muted);
   font-size: 12px;
+  flex-shrink: 0;
+}
+
+.main-head #sort {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.main-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .main-head #new-blank {
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tag-filter {
+  flex-shrink: 0;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.tag-filter:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.tag-filter .tag-x {
+  margin-left: 6px;
+  opacity: 0.75;
+}
+
+@media (max-width: 620px) {
+  .main-head {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .main-head h1 {
+    flex: 1 1 100%;
+  }
+
+  .main-head-actions {
+    margin-left: auto;
+  }
 }
 
 #detail-form-note {
@@ -325,6 +392,19 @@ button.primary {
 .row:hover,
 .row:focus-within {
   background: var(--hover);
+}
+
+.row.selected {
+  background: var(--hover);
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.row mark {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .thumb {
@@ -415,6 +495,33 @@ button.primary {
 .empty {
   color: var(--muted);
   padding: 32px 8px;
+}
+
+.empty-title {
+  margin: 0 0 4px;
+  color: var(--fg);
+  font-weight: 560;
+  font-size: 15px;
+}
+
+.empty p {
+  margin: 0 0 8px;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.confirm {
+  width: min(420px, 92vw);
+}
+
+.confirm-message {
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
 }
 
 .dialog {
@@ -554,6 +661,15 @@ body.scanning .wordmark::after {
   border-radius: 999px;
   padding: 1px 8px;
   font-size: 12px;
+}
+
+.chip-button {
+  cursor: pointer;
+}
+
+.chip-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chip-remove {
