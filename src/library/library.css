@@ -821,6 +821,7 @@ html.panel .sidebar {
 
 html.panel .main {
   height: 100%;
+  padding-bottom: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

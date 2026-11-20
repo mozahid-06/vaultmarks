@@ -47,3 +47,8 @@ test('long unbroken strings wrap inside a bookmark row', async () => {
   assert.match(css, /\.row-title\s*\{[^}]*overflow-wrap:\s*anywhere/i);
   assert.match(css, /\.row-meta\s*\{[^}]*overflow-wrap:\s*anywhere/i);
 });
+
+test('the panel list reaches the popup bottom', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /html\.panel \.main\s*\{[^}]*padding-bottom:\s*0/);
+});
