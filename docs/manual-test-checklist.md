@@ -33,6 +33,13 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       *Author (@handle) on X*, the description is the post text, and the cover
       is the post's photo or video still instead of the X logo. A post that
       quotes another post saves the outer post's text.
+- [ ] On facebook.com while logged in, save a post: the title has no `(1)`
+      counter and no ` | Facebook` suffix, and the description is the post body,
+      not the first comment.
+- [ ] Save a page that publishes no description (a Wikipedia article is the
+      easy one): the description is the opening paragraph. A feed or app shell
+      with no matching heading (Hacker News, a logged-out feed) still saves an
+      empty description rather than a random teaser.
 - [ ] Saving writes the note and it appears in the list immediately (and in an
       open library tab via `vault-changed`).
 - [ ] With `chrome://settings` active, **Save page** and **+** both toast

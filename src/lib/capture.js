@@ -85,6 +85,54 @@ function extractMeta() {
     }
   };
 
+  // Many sites ship no description at all (Wikipedia, for one). The opening
+  // paragraph of the article is the next best thing, and it is still the page's
+  // own words. Only used when every meta tag came back empty, and only on a
+  // page that looks like one article: an h1 that matches the title. That keeps
+  // app shells, challenge pages and feed homepages from donating a random
+  // teaser as the description.
+  const firstParagraph = () => {
+    const roots = [
+      document.querySelector('article'),
+      document.querySelector('main'),
+      document.querySelector('[role="main"]'),
+    ];
+    const pageTitle = String(document.title ?? '').toLowerCase();
+    for (const root of roots) {
+      if (!root) continue;
+      const heading = [...root.querySelectorAll('h1')]
+        .map((el) => squeeze(el.textContent))
+        .find((text) => text.length >= 3 && pageTitle.includes(text.toLowerCase()));
+      if (!heading) continue;
+      for (const p of root.querySelectorAll('p')) {
+        const text = squeeze(p.textContent);
+        if (text.length >= 100) return text.slice(0, 1200);
+      }
+    }
+    return '';
+  };
+
+  // Logged-in Facebook serves no Open Graph tags; the post text sits in this
+  // stable container. Comments use the same one, so pick the container closest
+  // to the top of the document: the post itself, not the first comment.
+  const fbPost = () => {
+    const host = location.hostname.replace(/^www\./i, '').toLowerCase();
+    if (!/(^|\.)facebook\.com$/.test(host)) return null;
+    const nodes = [...document.querySelectorAll('[data-ad-preview="message"], [data-ad-comet-preview="message"]')];
+    let best = null;
+    let bestTop = Infinity;
+    const scroll = window.scrollY || 0;
+    for (const el of nodes) {
+      const top = el.getBoundingClientRect().top + scroll;
+      if (top < bestTop) {
+        bestTop = top;
+        best = el;
+      }
+    }
+    const text = best ? squeeze(textOf(best)) : '';
+    return text === '' ? null : { text: text.slice(0, 1600) };
+  };
+
   // While logged in, X leaves og:description empty and points og:image at a
   // generic logo, even though the post text and its media are in the DOM.
   // Read those here so the bookmark keeps the post the user is looking at.
@@ -120,16 +168,18 @@ function extractMeta() {
     };
   };
 
+  const description = meta('meta[property="og:description"]')
+    || meta('meta[name="description"]')
+    || meta('meta[name="twitter:description"]')
+    || '';
+
   return {
     title: meta('meta[property="og:title"]') || document.title || '',
     // The address bar is the source of truth. A canonical link can point at a
     // different page (and on single-page apps it can lag behind the URL the
     // user is actually looking at).
     url: location.href,
-    description: meta('meta[property="og:description"]')
-      || meta('meta[name="description"]')
-      || meta('meta[name="twitter:description"]')
-      || '',
+    description: description || firstParagraph(),
     image: meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]') || '',
     favicon: document.querySelector('link[rel~="icon"]')?.href || '',
     // YouTube (and other video sites) leave the Open Graph tags on the first
@@ -140,6 +190,7 @@ function extractMeta() {
       .filter((text) => text.includes('VideoObject'))
       .slice(0, 10),
     xPost: xPost(),
+    fbPost: fbPost(),
   };
 }
 
@@ -237,6 +288,7 @@ export function structuredMeta(raw, pageUrl) {
 }
 
 const X_HOSTS = new Set(['x.com', 'twitter.com', 'mobile.twitter.com']);
+const FB_HOST = /(^|\.)facebook\.com$/;
 
 // X ships this as og:image on every logged-in page. It is a logo, not the
 // page's picture, so it is never worth saving as a cover.
@@ -257,34 +309,57 @@ export function xPostTextFromTitle(title) {
   return match ? collapse(match[1]) : '';
 }
 
+// Strip the unread counter and the app suffix Facebook adds to titles, e.g.
+// `(1) Beauty in chaos - NASA | Facebook`.
+export function cleanFacebookTitle(title) {
+  return collapse(title)
+    .replace(/^\(\d+\)\s*/, '')
+    .replace(/\s*\|\s*Facebook$/i, '')
+    .trim();
+}
+
 // X keeps the post text only in the DOM: while logged in there is no meta
 // description, and the image meta is a placeholder. Prefer what the page
 // itself shows, and build the same author title the site uses publicly.
+// Facebook is the same story, minus the title: no meta tags at all.
 export function siteMeta(raw, pageUrl) {
   const source = raw ?? {};
-  if (!X_HOSTS.has(hostOf(pageUrl))) return source;
+  const host = hostOf(pageUrl);
 
   let out = source;
-  if (X_PLACEHOLDER_IMAGE.test(String(out.image ?? '').trim())) out = { ...out, image: '' };
+  if (X_HOSTS.has(host)) {
+    if (X_PLACEHOLDER_IMAGE.test(String(out.image ?? '').trim())) out = { ...out, image: '' };
+    const post = out.xPost;
+    if (post && typeof post === 'object') {
+      const display = collapse(post.display);
+      const handle = collapse(post.handle).replace(/^@+/, '');
+      const author = display === ''
+        ? (handle === '' ? '' : `@${handle}`)
+        : (handle === '' ? display : `${display} (@${handle})`);
+      const text = collapse(post.text) || xPostTextFromTitle(out.title);
+      out = {
+        ...out,
+        title: author === '' ? out.title : `${author} on X`,
+        description: text === '' ? collapse(out.description) : text,
+        image: String(post.photo ?? '').trim()
+          || String(post.avatar ?? '').trim()
+          || out.image,
+      };
+    }
+  }
 
-  const post = out.xPost;
-  if (!post || typeof post !== 'object') return out;
+  if (FB_HOST.test(host)) {
+    const title = cleanFacebookTitle(out.title);
+    const post = out.fbPost;
+    const text = post && typeof post === 'object' ? collapse(post.text) : '';
+    out = {
+      ...out,
+      title: title === '' ? out.title : title,
+      description: collapse(out.description) || text,
+    };
+  }
 
-  const display = collapse(post.display);
-  const handle = collapse(post.handle).replace(/^@+/, '');
-  const author = display === ''
-    ? (handle === '' ? '' : `@${handle}`)
-    : (handle === '' ? display : `${display} (@${handle})`);
-  const text = collapse(post.text) || xPostTextFromTitle(out.title);
-
-  return {
-    ...out,
-    title: author === '' ? out.title : `${author} on X`,
-    description: text === '' ? collapse(out.description) : text,
-    image: String(post.photo ?? '').trim()
-      || String(post.avatar ?? '').trim()
-      || out.image,
-  };
+  return out;
 }
 
 const delay = (ms) => new Promise((resolve) => {

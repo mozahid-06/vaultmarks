@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeMeta, isSavableUrl, savePrefill, preferredPageUrl,
-  findVideoObject, structuredMeta, siteMeta, xPostTextFromTitle,
+  findVideoObject, structuredMeta, siteMeta, xPostTextFromTitle, cleanFacebookTitle,
 } from '../src/lib/capture.js';
 
 test('normalizeMeta resolves images, caps descriptions and falls back to the host', () => {
@@ -181,6 +181,30 @@ test('siteMeta handles a missing display name and handle', () => {
   const bare = siteMeta({ title: 'X', description: 'Kept', xPost: { text: '', display: '', handle: '' } }, 'https://x.com/a/status/1');
   assert.equal(bare.title, 'X');
   assert.equal(bare.description, 'Kept');
+});
+
+test('cleanFacebookTitle drops the unread counter and the app suffix', () => {
+  assert.equal(
+    cleanFacebookTitle('(1) Beauty in chaos - NASA | Facebook'),
+    'Beauty in chaos - NASA',
+  );
+  assert.equal(cleanFacebookTitle('NASA | Facebook'), 'NASA');
+  assert.equal(cleanFacebookTitle('(12) Something'), 'Something');
+  assert.equal(cleanFacebookTitle('(1)'), '');
+});
+
+test('siteMeta reads a Facebook post when the page has no meta tags', () => {
+  const raw = {
+    title: '(1) Beauty in chaos - NASA | Facebook',
+    description: '',
+    image: '',
+    fbPost: { text: 'Beauty in chaos. This photo from Chandra is the clearest view yet.' },
+  };
+  const meta = siteMeta(raw, 'https://www.facebook.com/NASA/posts/pfbid02');
+  assert.equal(meta.title, 'Beauty in chaos - NASA');
+  assert.equal(meta.description, 'Beauty in chaos. This photo from Chandra is the clearest view yet.');
+  const kept = siteMeta({ ...raw, description: 'Meta wins' }, 'https://web.facebook.com/a/posts/1');
+  assert.equal(kept.description, 'Meta wins');
 });
 
 test('savePrefill carries the captured fields and prefers the last-used collection', () => {
