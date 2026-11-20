@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildIndex, filterNotes, sortNewest, sortNotes, normalizeUrl, domainOf,
-  findByUrl, formatDate, obsidianUri, BASE_TAG,
+  findByUrl, formatDate, obsidianUri, BASE_TAG, tagsFromText,
 } from '../src/lib/notes.js';
 
 const note = (over) => ({
@@ -111,4 +111,15 @@ test('obsidianUri points at the note inside the vault', () => {
     obsidianUri('notes', 'Bookmarks', 'Development/React.md'),
     'obsidian://open?vault=notes&file=Bookmarks%2FDevelopment%2FReact',
   );
+});
+
+test('tagsFromText reads hashtags from a description and ignores noise', () => {
+  assert.deepEqual(
+    tagsFromText('Leg day #fitness #shorts https://e.com/page#frag #1 #l #ফিটনেস'),
+    ['fitness', 'shorts', 'ফিটনেস'],
+  );
+});
+
+test('tagsFromText deduplicates case-insensitively and skips the base tag', () => {
+  assert.deepEqual(tagsFromText('#React #react #bookmarks #Bookmarks'), ['React']);
 });

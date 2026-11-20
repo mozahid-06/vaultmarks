@@ -1,5 +1,23 @@
 export const BASE_TAG = 'bookmarks';
 
+const INLINE_TAG = /(?:^|[\s(])#([\p{L}\p{N}][\p{L}\p{N}\p{M}_-]*)/gu;
+
+// Hashtags in a captured description are the page's own tags. They only count
+// when they start a word, so URL fragments and issue numbers are left alone.
+export function tagsFromText(text) {
+  const tags = [];
+  const seen = new Set();
+  for (const match of String(text ?? '').matchAll(INLINE_TAG)) {
+    const tag = match[1].replace(/-+$/, '');
+    if (tag.length < 2 || /^\d+$/.test(tag)) continue;
+    const key = tag.toLowerCase();
+    if (key === BASE_TAG || seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+  }
+  return tags;
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function normalizeUrl(url) {

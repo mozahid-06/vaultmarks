@@ -221,8 +221,16 @@ test('savePrefill carries the captured fields and prefers the last-used collecti
   };
   assert.deepEqual(savePrefill(meta, { lastCollection: 'Dev', selectedCollection: '' }), {
     title: 'T', url: 'https://e.com', description: 'D',
-    image: 'https://e.com/i.png', favicon: 'https://e.com/f.ico', collection: 'Dev',
+    image: 'https://e.com/i.png', favicon: 'https://e.com/f.ico', tags: [], collection: 'Dev',
   });
   assert.equal(savePrefill(meta, { lastCollection: '', selectedCollection: 'Dev' }).collection, 'Dev');
   assert.equal(savePrefill(meta, {}).collection, '');
+});
+
+test('savePrefill turns hashtags in the description into tags', () => {
+  const prefill = savePrefill({
+    title: 'T', url: 'https://e.com', description: 'Leg day #fitness #shorts #l #1',
+    image: '', favicon: '',
+  });
+  assert.deepEqual(prefill.tags, ['fitness', 'shorts']);
 });

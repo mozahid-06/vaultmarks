@@ -1,4 +1,4 @@
-import { domainOf } from './notes.js';
+import { domainOf, tagsFromText } from './notes.js';
 
 function collapse(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -64,6 +64,7 @@ export function savePrefill(meta, { lastCollection = '', selectedCollection = ''
     description: meta.description,
     image: meta.image,
     favicon: meta.favicon,
+    tags: tagsFromText(meta.description),
     collection: lastCollection || selectedCollection || '',
   };
 }

@@ -658,7 +658,7 @@ function renderDetailEdit(note) {
   state.tagInput = createTagInput({
     input: el('detail-tag-input'),
     chips: el('detail-tags'),
-    initial: note ? userTags(note.tags) : [],
+    initial: note ? userTags(note.tags) : (state.prefill?.tags ?? []),
     suggestions: (state.index?.tags ?? []).map((tag) => tag.name),
     exclude: [BASE_TAG],
   });
