@@ -157,6 +157,21 @@ button.danger:hover:not(:disabled) {
   flex: 1;
 }
 
+.main-toolbar #new-bookmark {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.main-toolbar #new-bookmark:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
 .sidebar-heading {
   display: flex;
   align-items: center;
@@ -305,6 +320,15 @@ button.danger:hover:not(:disabled) {
   flex-shrink: 0;
   font-size: 12px;
   padding: 4px 6px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.main-head #sort:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .main-head-actions {

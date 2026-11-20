@@ -52,3 +52,10 @@ test('the panel list reaches the popup bottom', async () => {
   const css = await read('src/library/library.css');
   assert.match(css, /html\.panel \.main\s*\{[^}]*padding-bottom:\s*0/);
 });
+
+test('the sort control and quick-save button follow the panel palette', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /\.main-head #sort\s*\{[^}]*background:\s*var\(--surface\)/);
+  assert.match(css, /\.main-head #sort\s*\{[^}]*color:\s*var\(--fg\)/);
+  assert.match(css, /\.main-toolbar #new-bookmark\s*\{[^}]*border-radius:\s*50%/);
+});
