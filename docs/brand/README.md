@@ -22,6 +22,9 @@ on the right. It already ships in two cuts; do not redraw either one.
 - Clear space on every side is at least the width of one bookmark bar in the
   mark.
 - Do not recolour, rotate, outline or add a glow to the mark.
+- In `banner.svg` and `social-preview.svg` the mark's centre shares the centre
+  of the three-line text block, so the lockup reads level instead of hanging
+  below the icon.
 
 ## Palette
 
