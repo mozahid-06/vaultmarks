@@ -20,9 +20,11 @@ no database: the files are the product.
 
 ## Two places, one library
 
-<img src="docs/brand/phone.png" alt="The Vaultmarks viewer at phone width" width="390">
+<p align="center">
+  <img src="docs/brand/phone.png" alt="The Vaultmarks viewer at phone width" width="390">
+</p>
 
-*The viewer at phone width: search, nested collections and editable cards.*
+<p align="center"><em>The viewer at phone width: search, nested collections and editable cards.</em></p>
 
 On the desktop, one click captures the page: title, URL, description, cover,
 favicon and tags. The note lands in the collection you choose, in the same
