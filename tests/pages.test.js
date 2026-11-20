@@ -47,12 +47,3 @@ test('long unbroken strings wrap inside a bookmark row', async () => {
   assert.match(css, /\.row-title\s*\{[^}]*overflow-wrap:\s*anywhere/i);
   assert.match(css, /\.row-meta\s*\{[^}]*overflow-wrap:\s*anywhere/i);
 });
-
-test('the panel grows with its content and caps at 600px', async () => {
-  const css = await read('src/library/library.css');
-  const panel = css.match(/html\.panel\s*\{([^}]*)\}/)[1];
-  assert.match(panel, /max-height:\s*600px/);
-  assert.doesNotMatch(panel, /^\s*height:\s*600px/m);
-  assert.match(css, /html\.panel \.main\s*\{[^}]*max-height:\s*600px/);
-  assert.match(css, /html\.panel \.sidebar\s*\{[^}]*height:\s*auto/);
-});

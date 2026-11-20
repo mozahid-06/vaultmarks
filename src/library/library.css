@@ -801,27 +801,26 @@ body.scanning .wordmark::after {
 
 html.panel {
   width: 780px;
-  max-height: 600px;
+  height: 600px;
 }
 
 html.panel body {
-  max-height: 600px;
+  height: 100%;
   overflow: hidden;
 }
 
 html.panel .workspace {
-  max-height: 600px;
+  height: 100%;
   align-items: stretch;
 }
 
 html.panel .sidebar {
   position: static;
-  height: auto;
-  max-height: 600px;
+  height: 100%;
 }
 
 html.panel .main {
-  max-height: 600px;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
