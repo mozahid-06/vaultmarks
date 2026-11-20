@@ -244,7 +244,27 @@ function renderSidebar() {
 }
 
 function faviconTile(note) {
-  return h('div', { className: 'favicon-tile' }, h('img', { alt: '', src: faviconUrl(note.url, 32) }));
+  const domain = domainOf(note.url);
+  const own = typeof note.favicon === 'string' && /^https?:/i.test(note.favicon) ? note.favicon : '';
+  // Notes saved before Vaultmarks have no favicon field, and Chrome's cached
+  // favicon only exists for pages this profile has visited. Ask Google for the
+  // site's icon in that case, then keep Chrome's endpoint as the last resort.
+  const remote = domain
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`
+    : '';
+  const cached = faviconUrl(note.url, 32);
+  const sources = [own, remote, cached].filter(Boolean);
+  const image = h('img', { alt: '', src: sources[0] ?? cached });
+  let next = 1;
+  image.addEventListener('error', () => {
+    if (next < sources.length) {
+      image.src = sources[next];
+      next += 1;
+    } else {
+      image.onerror = null;
+    }
+  });
+  return h('div', { className: 'favicon-tile' }, image);
 }
 
 function coverElement(note) {
