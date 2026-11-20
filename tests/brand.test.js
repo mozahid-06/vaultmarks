@@ -120,3 +120,7 @@ test('repo viewer matches the live note and keeps recent behaviour', async () =>
     assert.ok(repo.includes(name), `missing ${name}`);
   }
 });
+
+test('README screenshots exist at their declared sizes', async () => {
+  assert.deepEqual(pngSize(await readBuffer('docs/brand/panel.png')), [1560, 1200]);
+});
