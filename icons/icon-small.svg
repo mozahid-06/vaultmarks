@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Vaultmarks">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1730"/><stop offset="1" stop-color="#0c0a14"/></linearGradient>
+<linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d4ae0"/></linearGradient>
+<clipPath id="left"><rect x="0" y="0" width="256" height="512"/></clipPath>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<path d="M112 45H400V467L256 357L112 467Z" fill="url(#violet)"/>
+<path d="M112 45H256V357L112 467Z" fill="#3b2a78" clip-path="url(#left)"/>
+<path d="M148 81H364V394L256 311L148 394Z" fill="none" stroke="#ffffff" stroke-opacity="0.95" stroke-width="12" stroke-linejoin="round"/>
+<path d="M186 119H326V318L256 266L186 318Z" fill="#ffffff" fill-opacity="0.97"/>
+</svg>

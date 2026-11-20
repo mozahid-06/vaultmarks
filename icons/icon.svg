@@ -1,4 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#5b7cfa"/>
-  <path d="M44 28h40a8 8 0 0 1 8 8v64l-28-18-28 18V36a8 8 0 0 1 8-8z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Logo: left half a faceted dark glass shard, right half nested bookmark icons">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1730"/><stop offset="1" stop-color="#0c0a14"/></linearGradient>
+<linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b82f5"/><stop offset="1" stop-color="#5a3fd1"/></linearGradient>
+<clipPath id="right"><rect x="256" y="0" width="256" height="512"/></clipPath>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<g stroke="#a794ff" stroke-opacity="0.28" stroke-width="1.5" stroke-linejoin="round">
+<polygon points="136,80 256,80 200,170 136,150" fill="#3a2d66"/>
+<polygon points="136,150 200,170 170,260 136,240" fill="#261d47"/>
+<polygon points="256,80 256,200 200,170" fill="#5a46a0"/>
+<polygon points="200,170 256,200 220,290 170,260" fill="#30255a"/>
+<polygon points="256,200 256,340 220,290" fill="#6e58b8"/>
+<polygon points="136,240 170,260 136,320" fill="#4a3a85"/>
+<polygon points="170,260 220,290 256,340 136,432 136,320" fill="#1c1536"/>
+</g>
+<path d="M256 80H136V432L256 340" fill="none" stroke="#8f78e6" stroke-opacity="0.6" stroke-width="3" stroke-linejoin="round"/>
+<g clip-path="url(#right)">
+<path d="M136 80H376V432L256 340L136 432Z" fill="url(#violet)"/>
+<path d="M166 110H346V371L256 302L166 371Z" fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="9" stroke-linejoin="round"/>
+<path d="M198 142H314V308L256 264L198 308Z" fill="#ffffff" fill-opacity="0.96"/>
+</g>
 </svg>
