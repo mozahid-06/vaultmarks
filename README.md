@@ -6,7 +6,7 @@
 
 ![Chromium MV3](https://img.shields.io/badge/Chromium-MV3-6d4ae0?style=flat-square)
 ![No server](https://img.shields.io/badge/server-none-14101f?style=flat-square)
-![Obsidian](https://img.shields.io/badge/Obsidian-vault-a78bfa?style=flat-square)
+![Obsidian](https://img.shields.io/badge/Obsidian-vault-6d4ae0?style=flat-square)
 ![Markdown](https://img.shields.io/badge/storage-Markdown-c4b5fd?style=flat-square)
 
 Vaultmarks saves the page you are on as a Markdown note in your Obsidian vault,
@@ -240,7 +240,7 @@ What it does:
   (offline or blocked) it switches to a small Title/Description form so the
   bookmark can still be saved.
 - **Phone layout** — controls, cards and the folder tree adapt to phone-width
-  panes: 40px touch targets, 16px inputs so iOS does not zoom on focus, and
+  panes: 34–40px touch targets, 16px inputs so iOS does not zoom on focus, and
   a single-line ellipsised URL.
 
 The page expects the notes in a top-level `Bookmarks` folder, exactly where

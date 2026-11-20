@@ -116,6 +116,14 @@ const VIEWER_CSS = `
   .bv-viewer .bv-card-desc { font-size: 0.76em !important; }
   .bv-viewer .bv-action-btn { width: 34px !important; height: 34px !important; }
 }
+
+.bv-viewer input:focus,
+.bv-viewer select:focus,
+.bv-viewer button:focus-visible,
+.bv-viewer summary:focus-visible {
+  outline: 2px solid #a78bfa !important;
+  outline-offset: 2px;
+}
 `;
 
 function injectViewerStyles() {
@@ -163,7 +171,7 @@ function getBodyCover(page) {
 const COLORS = {
     cardBg: "#161226",
     leftPanelBg: "#100c1e",
-    border: "rgba(167, 139, 250, 0.32)",
+    border: "rgba(167, 139, 250, 0.6)",
     title: "#c4b5fd",
     description: "#d7d3e3",
     url: "#a78bfa",
@@ -181,12 +189,12 @@ dv.container.style.borderRadius = "12px";
 dv.container.style.boxSizing = "border-box";
 
 // Shared style for the small edit/delete buttons on each card
-const ACTION_BTN_STYLE = `flex-shrink: 0; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`;
+const ACTION_BTN_STYLE = `flex-shrink: 0; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${COLORS.title}; padding: 0; touch-action: manipulation;`;
 const DELETE_ARMED_STYLE = `${ACTION_BTN_STYLE} border-color: #f87171; color: #f87171; background: rgba(248, 113, 113, 0.12);`;
 const DELETE_HOVER_STYLE = `${ACTION_BTN_STYLE} border-color: rgba(248, 113, 113, 0.7); color: #f87171; opacity: 1;`;
 
 // Styles for the "+" (add bookmark) button and its inline panel
-const ADD_BTN_STYLE = `flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; width: 36px; height: 36px; box-sizing: border-box; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`;
+const ADD_BTN_STYLE = `flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; width: 36px; height: 36px; box-sizing: border-box; cursor: pointer; color: ${COLORS.title}; padding: 0; touch-action: manipulation;`;
 const ADD_BTN_ACTIVE_STYLE = `${ADD_BTN_STYLE} opacity: 1; background: rgba(167, 139, 250, 0.12);`;
 const CREATOR_STYLE = `display: flex; flex-direction: column; gap: 8px; padding: 12px; margin: 4px 0 10px; border: 1px solid ${COLORS.border}; border-radius: 10px; background: ${COLORS.cardBg};`;
 const CREATOR_HIDDEN_STYLE = `display: none;`;
@@ -857,7 +865,7 @@ const searchInput = searchBox.createEl("input", {
     attr: {
         type: "text",
         placeholder: "Search bookmarks (title, description, URL, tags)...",
-        style: `flex: 1; width: 100%; height: 36px; box-sizing: border-box; padding: 0 14px 0 38px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.cardBg}; color: ${COLORS.description}; font-size: 0.95em; outline: none;`
+        style: `flex: 1; width: 100%; height: 36px; box-sizing: border-box; padding: 0 14px 0 38px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.cardBg}; color: ${COLORS.description}; font-size: 0.95em;`
     }
 });
 
@@ -890,14 +898,14 @@ const newUrlInput = creatorRow.createEl("input", {
         type: "text",
         placeholder: "Paste a link and press Enter",
         title: "Title, description, cover and favicon are fetched automatically",
-        style: `flex: 1 1 240px; min-width: 200px; height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em; outline: none;`
+        style: `flex: 1 1 240px; min-width: 200px; height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em;`
     }
 });
 
 const folderSelect = creatorRow.createEl("select", {
     cls: "bv-add-select",
     attr: {
-        style: `flex: 0 1 auto; min-width: 150px; max-width: 220px; height: 36px; box-sizing: border-box; padding: 0 30px 0 10px; border-radius: 8px; border: 1px solid ${COLORS.border}; background-color: ${COLORS.leftPanelBg}; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNhNzhiZmEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4="); background-repeat: no-repeat; background-position: right 9px center; appearance: none; -webkit-appearance: none; color: ${COLORS.description}; font-size: 0.9em; font-family: inherit; outline: none;`,
+        style: `flex: 0 1 auto; min-width: 150px; max-width: 220px; height: 36px; box-sizing: border-box; padding: 0 30px 0 10px; border-radius: 8px; border: 1px solid ${COLORS.border}; background-color: ${COLORS.leftPanelBg}; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNhNzhiZmEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4="); background-repeat: no-repeat; background-position: right 9px center; appearance: none; -webkit-appearance: none; color: ${COLORS.description}; font-size: 0.9em; font-family: inherit;`,
         title: "Collection for the new bookmark"
     }
 });
@@ -925,7 +933,7 @@ const createBtn = creatorRow.createEl("button", {
 const cancelBtn = creatorRow.createEl("button", {
     cls: "bv-round-btn",
     attr: {
-        style: `flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 36px; width: 36px; box-sizing: border-box; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; cursor: pointer; color: ${COLORS.title}; opacity: 0.85; padding: 0; touch-action: manipulation;`,
+        style: `flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 36px; width: 36px; box-sizing: border-box; background: transparent; border: 1px solid ${COLORS.border}; border-radius: 8px; cursor: pointer; color: ${COLORS.title}; padding: 0; touch-action: manipulation;`,
         title: "Close",
         "aria-label": "Close the add panel"
     }
@@ -943,7 +951,7 @@ const newTitleInput = manualRow.createEl("input", {
     attr: {
         type: "text",
         placeholder: "Title",
-        style: `height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em; outline: none;`
+        style: `height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em;`
     }
 });
 
@@ -952,7 +960,7 @@ const newDescInput = manualRow.createEl("input", {
     attr: {
         type: "text",
         placeholder: "Description (optional)",
-        style: `height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em; outline: none;`
+        style: `height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${COLORS.border}; background: ${COLORS.leftPanelBg}; color: ${COLORS.description}; font-size: 0.92em;`
     }
 });
 

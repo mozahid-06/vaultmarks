@@ -56,6 +56,11 @@ button:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -99,7 +104,7 @@ button.danger:hover:not(:disabled) {
 }
 
 #search:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: 2px solid var(--accent);
   border-color: var(--accent);
 }
 
@@ -397,7 +402,7 @@ button.danger:hover:not(:disabled) {
 
 .row.selected {
   background: var(--hover);
-  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -643,7 +648,7 @@ body.scanning .wordmark::after {
 .dialog input:focus,
 .dialog textarea:focus,
 .dialog select:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: 2px solid var(--accent);
   border-color: var(--accent);
 }
 

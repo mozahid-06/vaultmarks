@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const readBuffer = (path) => readFile(new URL(`../${path}`, import.meta.url));
@@ -35,6 +38,15 @@ function luminance(hex) {
 function contrast(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
+}
+
+function blend(fg, alpha, bg) {
+  const channels = [1, 3, 5].map((i) => {
+    const front = parseInt(fg.slice(i, i + 2), 16);
+    const back = parseInt(bg.slice(i, i + 2), 16);
+    return Math.round(front * alpha + back * (1 - alpha)).toString(16).padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
 }
 
 test('extension tokens use the brand palette', async () => {
@@ -93,7 +105,7 @@ test('viewer uses the brand palette and paints its own dark surface', async () =
   for (const literal of [
     'cardBg: "#161226"',
     'leftPanelBg: "#100c1e"',
-    'border: "rgba(167, 139, 250, 0.32)"',
+    'border: "rgba(167, 139, 250, 0.6)"',
     'title: "#c4b5fd"',
     'description: "#d7d3e3"',
     'url: "#a78bfa"',
@@ -104,31 +116,39 @@ test('viewer uses the brand palette and paints its own dark surface', async () =
   ]) {
     assert.ok(md.includes(literal), `missing ${literal}`);
   }
-  assert.ok(!md.includes('#5eead4'), 'teal text colour survived');
-  assert.ok(!md.includes('rgba(94, 234, 212'), 'teal alpha survived');
+  assert.ok(!md.toLowerCase().includes('#5eead4'), 'teal text colour survived');
+  assert.ok(!md.toLowerCase().includes('%235eead4'), 'encoded teal survived');
+  assert.ok(!md.toLowerCase().includes('rgba(94, 234, 212'), 'teal alpha survived');
   assert.ok(md.includes('%23a78bfa'), 'fallback icon is not violet');
   assert.ok(md.includes('background: #5a3fd1'), 'letter tile is not violet');
+  for (const match of md.matchAll(/base64,([A-Za-z0-9+/=]+)/g)) {
+    const svg = Buffer.from(match[1], 'base64').toString('utf8');
+    assert.doesNotMatch(svg, /#5eead4|94,\s*234,\s*212/i, 'encoded SVG still uses teal');
+  }
 });
 
-test('repo viewer matches the live note and keeps recent behaviour', async () => {
-  const [repo, live] = await Promise.all([
-    read('obsidian/vaultmarks.md'),
-    readFile(`${process.env.HOME}/Documents/notes/vaultmarks.md`, 'utf8'),
-  ]);
-  assert.equal(repo, live);
+const liveNote = process.env.VAULTMARKS_LIVE_NOTE
+  ?? join(homedir(), 'Documents/notes/vaultmarks.md');
+
+test('repo viewer keeps recent behaviour', async () => {
+  const repo = await read('obsidian/vaultmarks.md');
   for (const name of ['renderFaviconFallback', 'whenNearViewport', 'mdDestination']) {
     assert.ok(repo.includes(name), `missing ${name}`);
   }
 });
 
+test('repo viewer matches the live note when it is present', { skip: !existsSync(liveNote) }, async () => {
+  assert.equal(await read('obsidian/vaultmarks.md'), await readFile(liveNote, 'utf8'));
+});
+
 test('README screenshots exist at their declared sizes', async () => {
   assert.deepEqual(pngSize(await readBuffer('docs/brand/panel.png')), [1560, 1200]);
+  const social = await readBuffer('docs/brand/social-preview.png');
+  assert.ok(social.length < 1024 * 1024, `social preview is ${social.length} bytes`);
 });
 
 test('phone capture is a tall 390px-wide view', async () => {
-  const [width, height] = pngSize(await readBuffer('docs/brand/phone.png'));
-  assert.equal(width, 780);
-  assert.ok(height > 1200, `phone capture is ${width}x${height}`);
+  assert.deepEqual(pngSize(await readBuffer('docs/brand/phone.png')), [780, 2178]);
 });
 
 test('README leads with the brand assets and tagline', async () => {
@@ -170,4 +190,54 @@ test('the repository is licensed GPL-3.0 and says so', async () => {
   assert.equal(pkg.license, 'GPL-3.0-only');
   const readme = await read('README.md');
   assert.match(readme, /GNU General Public License/);
+});
+
+test('rendered text pairs and UI boundaries meet the contrast floor', () => {
+  const card = '#161226';
+  const panel = '#100c1e';
+  const page = '#14101f';
+
+  const textPairs = [
+    [blend('#a78bfa', 0.8, card), card],
+    [blend('#a78bfa', 0.8, panel), panel],
+    [blend('#d7d3e3', 0.6, page), page],
+    [blend('#d7d3e3', 0.9, card), card],
+    ['#c4b5fd', blend('#c4b5fd', 0.32, card)],
+  ];
+  for (const [fg, bg] of textPairs) {
+    assert.ok(contrast(fg, bg) >= 4.5, `${fg} on ${bg} is ${contrast(fg, bg).toFixed(2)}:1`);
+  }
+
+  const boundaries = [
+    [blend('#a78bfa', 0.6, card), card],
+    [blend('#a78bfa', 0.6, page), page],
+    ['#6d4ae0', '#ffffff'],
+    ['#a78bfa', '#14111d'],
+  ];
+  for (const [fg, bg] of boundaries) {
+    assert.ok(contrast(fg, bg) >= 3, `${fg} on ${bg} is ${contrast(fg, bg).toFixed(2)}:1`);
+  }
+});
+
+test('focus and selection indicators use the solid accent', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /#search:focus\s*\{[^}]*outline: 2px solid var\(--accent\)/);
+  assert.match(css, /\.row\.selected\s*\{[^}]*outline: 2px solid var\(--accent\)/);
+  assert.match(css, /\.dialog input:focus,[^}]*outline: 2px solid var\(--accent\)/);
+
+  const viewer = await read('obsidian/vaultmarks.md');
+  assert.match(viewer, /\.bv-viewer input:focus,[\s\S]*outline: 2px solid #a78bfa/);
+  assert.doesNotMatch(viewer, /outline: none/);
+});
+
+test('README badge and touch-target copy stay accurate', async () => {
+  const md = await read('README.md');
+  assert.ok(!md.includes('Obsidian-vault-a78bfa'), 'light violet badge fails contrast');
+  assert.ok(md.includes('Obsidian-vault-6d4ae0'));
+  assert.ok(md.includes('34–40px touch targets'));
+});
+
+test('sample captures use no teal cover', async () => {
+  const fixtures = await read('docs/brand/tools/fixtures.mjs');
+  assert.ok(!fixtures.toLowerCase().includes('#0f766e'));
 });

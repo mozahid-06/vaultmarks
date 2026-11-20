@@ -30,28 +30,34 @@ on the right. It already ships in two cuts; do not redraw either one.
 | Ink 950 | `#0c0a14` | Deepest background, banner base |
 | Ink 900 | `#14101f` | Brand dark background, viewer surface |
 | Ink 850 | `#1b1730` | Banner gradient, raised dark surfaces |
-| Ink 800 | `#241d3d` | Hover, borders on dark |
+| Ink 800 | `#241d3d` | Mark artwork and illustration |
 | UI dark | `#14111d` | Extension `--bg` in dark mode |
 | Viewer card | `#161226` | Viewer `cardBg` |
 | Viewer panel | `#100c1e` | Viewer `leftPanelBg` |
 | Violet 300 | `#c4b5fd` | Titles and primary text on dark |
 | Violet 400 | `#a78bfa` | Accent on dark, links, UI borders |
-| Violet 500 | `#8b6ef5` | Gradient midpoint |
+| Violet 500 | `#8b6ef5` | Sample-cover midpoint |
 | Violet 600 | `#6d4ae0` | Primary buttons on light, focus |
 | Violet 700 | `#5a3fd1` | Gradient end, monogram tiles |
 | Mark stroke | `#a794ff` / `#8f78e6` | Facet strokes in `icons/icon.svg` |
 | Mark gradient | `#9b82f5` → `#5a3fd1` | Bookmark body in the mark |
-| Paper | `#f7f5fb` | Light raised surfaces |
+| Paper | `#f7f5fb` | Illustration background, not used by the UI |
 | Success teal | `#2dd4bf` | Success and positive states only |
 | Danger | `#c0392b` light / `#f07171` dark | Destructive actions |
+| UI light surface | `#f8f6fc` | Extension `--surface` in light mode |
+| UI light hover | `#f1edf9` | Extension `--hover` in light mode |
+| UI dark surface | `#1d1829` | Extension `--surface` in dark mode |
+| UI dark hover | `#262033` | Extension `--hover` in dark mode |
+| UI dark line | `#322b45` | Neutral dividers in dark mode |
 
 Rules:
 
 - Violet is for identity and interaction. Teal is not a second brand colour;
   it is reserved for success states.
 - Body copy stays neutral: `#d7d3e3` on dark, `#1b1726` on light.
-- Every text/background pair reaches 4.5:1. UI borders and focus rings reach
-  3:1.
+- Every text/background pair reaches 4.5:1.
+- Focus rings, selected rows and the viewer card boundary reach 3:1. Neutral
+  dividers and input outlines are decorative and use the palette neutrals.
 - The per-note monogram colours stored in the vault stay as they are. Only the
   runtime letter fallback uses Violet 700.
 
@@ -87,7 +93,7 @@ file.
 | `social-preview.svg` | 1280×640 | Source for the social preview |
 | `social-preview.png` | 1280×640 | GitHub social preview upload |
 | `panel.png` | 1560×1200 (780×600 at 2×) | Real extension panel, dark scheme |
-| `phone.png` | 780×2178 (390px at 2×) | Viewer at phone width |
+| `phone.png` | 780×2178 (390px at 2×) | Viewer at phone width; folders are expanded for the capture |
 
 The PNGs are committed so the README does not depend on a build. The SVGs are
 the editable sources.
