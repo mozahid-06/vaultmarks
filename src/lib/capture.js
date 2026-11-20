@@ -59,13 +59,77 @@ export function savePrefill(meta, { lastCollection = '', selectedCollection = ''
 
 function extractMeta() {
   const meta = (selector) => document.querySelector(selector)?.content ?? '';
+
+  // Rebuild the visible text of a subtree. Emoji are images on X, so their alt
+  // text has to be included; innerText leaves them out.
+  const textOf = (node) => {
+    let out = '';
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3) out += child.nodeValue;
+      else if (child.nodeType === 1) {
+        const tag = child.tagName.toLowerCase();
+        out += tag === 'img'
+          ? (child.getAttribute('alt') ?? '')
+          : tag === 'br' ? ' ' : textOf(child);
+      }
+    }
+    return out;
+  };
+
+  const squeeze = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+  const decode = (value) => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+
+  // While logged in, X leaves og:description empty and points og:image at a
+  // generic logo, even though the post text and its media are in the DOM.
+  // Read those here so the bookmark keeps the post the user is looking at.
+  const xPost = () => {
+    const host = location.hostname.replace(/^www\./i, '').toLowerCase();
+    if (host !== 'x.com' && host !== 'twitter.com') return null;
+    if (!/\/status(?:es)?\/\d+/.test(location.pathname)) return null;
+    const article = document.querySelector('article[tabindex="-1"]') || document.querySelector('article');
+    if (!article) return null;
+
+    // A quoted post lives inside a link card. Its author, text and media must
+    // not be mistaken for the post being saved.
+    const quoted = (el) => el.closest('[role="link"][tabindex="0"]') !== null;
+    const firstOwn = (selector) => [...article.querySelectorAll(selector)]
+      .find((el) => !quoted(el)) ?? null;
+
+    const textEl = firstOwn('[data-testid="tweetText"]');
+    const nameEl = firstOwn('[data-testid="User-Name"]');
+    const nameLink = [...(nameEl?.querySelectorAll('a[href]') ?? [])]
+      .find((a) => !quoted(a) && squeeze(a.textContent) !== '') ?? null;
+    const images = [...article.querySelectorAll('img')].filter((img) => !quoted(img));
+    const photo = images.find((img) => /\/(?:media|amplify_video_thumb)\//.test(img.src));
+    const avatar = images.find((img) => img.src.includes('/profile_images/'));
+
+    return {
+      text: textEl ? squeeze(textOf(textEl)).slice(0, 1600) : '',
+      display: nameLink ? squeeze(nameLink.textContent) : '',
+      handle: nameLink
+        ? decode((nameLink.getAttribute('href') ?? '').replace(/^\/+/, '').split(/[/?#]/)[0])
+        : '',
+      photo: photo?.src ?? '',
+      avatar: avatar?.src ?? '',
+    };
+  };
+
   return {
     title: meta('meta[property="og:title"]') || document.title || '',
     // The address bar is the source of truth. A canonical link can point at a
     // different page (and on single-page apps it can lag behind the URL the
     // user is actually looking at).
     url: location.href,
-    description: meta('meta[property="og:description"]') || meta('meta[name="description"]') || '',
+    description: meta('meta[property="og:description"]')
+      || meta('meta[name="description"]')
+      || meta('meta[name="twitter:description"]')
+      || '',
     image: meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]') || '',
     favicon: document.querySelector('link[rel~="icon"]')?.href || '',
     // YouTube (and other video sites) leave the Open Graph tags on the first
@@ -75,6 +139,7 @@ function extractMeta() {
       .map((script) => script.textContent ?? '')
       .filter((text) => text.includes('VideoObject'))
       .slice(0, 10),
+    xPost: xPost(),
   };
 }
 
@@ -171,6 +236,57 @@ export function structuredMeta(raw, pageUrl) {
   };
 }
 
+const X_HOSTS = new Set(['x.com', 'twitter.com', 'mobile.twitter.com']);
+
+// X ships this as og:image on every logged-in page. It is a logo, not the
+// page's picture, so it is never worth saving as a cover.
+const X_PLACEHOLDER_IMAGE = /^https?:\/\/abs\.twimg\.com\/rweb\/ssr\/default\//i;
+
+function hostOf(pageUrl) {
+  try {
+    return new URL(String(pageUrl ?? '')).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+// `Author on X: "the post text" / X` is what X uses for og:title. It is the
+// fallback when the post body has not rendered yet.
+export function xPostTextFromTitle(title) {
+  const match = /\son X: "(.*)" \/ X$/.exec(collapse(title));
+  return match ? collapse(match[1]) : '';
+}
+
+// X keeps the post text only in the DOM: while logged in there is no meta
+// description, and the image meta is a placeholder. Prefer what the page
+// itself shows, and build the same author title the site uses publicly.
+export function siteMeta(raw, pageUrl) {
+  const source = raw ?? {};
+  if (!X_HOSTS.has(hostOf(pageUrl))) return source;
+
+  let out = source;
+  if (X_PLACEHOLDER_IMAGE.test(String(out.image ?? '').trim())) out = { ...out, image: '' };
+
+  const post = out.xPost;
+  if (!post || typeof post !== 'object') return out;
+
+  const display = collapse(post.display);
+  const handle = collapse(post.handle).replace(/^@+/, '');
+  const author = display === ''
+    ? (handle === '' ? '' : `@${handle}`)
+    : (handle === '' ? display : `${display} (@${handle})`);
+  const text = collapse(post.text) || xPostTextFromTitle(out.title);
+
+  return {
+    ...out,
+    title: author === '' ? out.title : `${author} on X`,
+    description: text === '' ? collapse(out.description) : text,
+    image: String(post.photo ?? '').trim()
+      || String(post.avatar ?? '').trim()
+      || out.image,
+  };
+}
+
 const delay = (ms) => new Promise((resolve) => {
   setTimeout(resolve, ms);
 });
@@ -239,5 +355,5 @@ export async function captureActiveTab() {
   }
 
   pageUrl = preferredPageUrl(tab.url, raw?.url ?? '');
-  return normalizeMeta(structuredMeta(raw, pageUrl), pageUrl);
+  return normalizeMeta(siteMeta(structuredMeta(raw, pageUrl), pageUrl), pageUrl);
 }

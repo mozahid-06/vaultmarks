@@ -29,6 +29,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       reload); **Save page** and **+** capture the video on screen — its URL,
       title, thumbnail and description — not the first video or the previous
       one. Autoplay switching while the panel is open behaves the same.
+- [ ] On x.com while logged in, save a post: the title is
+      *Author (@handle) on X*, the description is the post text, and the cover
+      is the post's photo or video still instead of the X logo. A post that
+      quotes another post saves the outer post's text.
 - [ ] Saving writes the note and it appears in the list immediately (and in an
       open library tab via `vault-changed`).
 - [ ] With `chrome://settings` active, **Save page** and **+** both toast

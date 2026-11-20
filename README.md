@@ -77,7 +77,10 @@ the list, and its detail view offers **Open in Obsidian**.
 Capture follows the page itself: on sites that change content without a reload
 (YouTube, for example) it reads the URL and the current video's structured
 data, so the note matches what is on screen rather than the first video or the
-previous page.
+previous page. On X, where a logged-in page has no meta description and points
+its preview image at a logo, it reads the post text and media from the page:
+the title becomes *Author (@handle) on X*, the description is the post, and the
+cover is its photo or video still.
 
 **Quick save.** Press **+** next to the search box on a normal web page.
 Vaultmarks captures the page and asks only two things: the collection and the

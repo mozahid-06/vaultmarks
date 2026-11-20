@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeMeta, isSavableUrl, savePrefill, preferredPageUrl,
-  findVideoObject, structuredMeta,
+  findVideoObject, structuredMeta, siteMeta, xPostTextFromTitle,
 } from '../src/lib/capture.js';
 
 test('normalizeMeta resolves images, caps descriptions and falls back to the host', () => {
@@ -121,6 +121,66 @@ test('structuredMeta never keeps metadata from the previous video', () => {
   assert.equal(meta.title, 'Bare');
   assert.equal(meta.description, '');
   assert.equal(meta.image, '');
+});
+
+test('xPostTextFromTitle reads the post text out of an og:title', () => {
+  assert.equal(
+    xPostTextFromTitle('jack on X: "❤️" / X'),
+    '❤️',
+  );
+  assert.equal(
+    xPostTextFromTitle('NASA on X: "On Sunday, we launch." / X'),
+    'On Sunday, we launch.',
+  );
+  assert.equal(xPostTextFromTitle('NASA (@NASA) / X'), '');
+  assert.equal(xPostTextFromTitle(''), '');
+});
+
+test('siteMeta uses the post the page is showing instead of empty meta tags', () => {
+  const raw = {
+    title: 'X',
+    description: '',
+    image: 'https://abs.twimg.com/rweb/ssr/default/v2/og/image.png',
+    xPost: {
+      text: 'On Sunday, Nov. 29, our cargo mission lifts off.',
+      display: 'NASA',
+      handle: 'NASA',
+      photo: 'https://pbs.twimg.com/media/HXhDFa4W4AAJZaF?format=jpg&name=900x900',
+      avatar: 'https://pbs.twimg.com/profile_images/1/a_bigger.jpg',
+    },
+  };
+  const meta = siteMeta(raw, 'https://x.com/NASA/status/2123520987698270687');
+  assert.equal(meta.title, 'NASA (@NASA) on X');
+  assert.equal(meta.description, 'On Sunday, Nov. 29, our cargo mission lifts off.');
+  assert.equal(meta.image, 'https://pbs.twimg.com/media/HXhDFa4W4AAJZaF?format=jpg&name=900x900');
+});
+
+test('siteMeta falls back to og:title text, then the avatar', () => {
+  const meta = siteMeta({
+    title: 'jack on X: "❤️" / X',
+    description: '',
+    image: '',
+    xPost: { text: '', display: 'jack', handle: '@jack', photo: '', avatar: 'https://pbs.twimg.com/profile_images/2/b.jpg' },
+  }, 'https://x.com/jack/status/20');
+  assert.equal(meta.title, 'jack (@jack) on X');
+  assert.equal(meta.description, '❤️');
+  assert.equal(meta.image, 'https://pbs.twimg.com/profile_images/2/b.jpg');
+});
+
+test('siteMeta drops the generic X image and leaves other sites alone', () => {
+  const placeholder = 'https://abs.twimg.com/rweb/ssr/default/v2/og/image.png';
+  assert.equal(siteMeta({ image: placeholder, xPost: null }, 'https://x.com/jack').image, '');
+  const other = { title: 'T', image: 'https://example.com/i.png' };
+  assert.equal(siteMeta(other, 'https://example.com/a').image, 'https://example.com/i.png');
+  assert.equal(siteMeta(other, 'https://example.com/a'), other);
+});
+
+test('siteMeta handles a missing display name and handle', () => {
+  const handleOnly = siteMeta({ title: 'X', xPost: { text: 'Hi', display: '', handle: '@someone' } }, 'https://twitter.com/a/status/1');
+  assert.equal(handleOnly.title, '@someone on X');
+  const bare = siteMeta({ title: 'X', description: 'Kept', xPost: { text: '', display: '', handle: '' } }, 'https://x.com/a/status/1');
+  assert.equal(bare.title, 'X');
+  assert.equal(bare.description, 'Kept');
 });
 
 test('savePrefill carries the captured fields and prefers the last-used collection', () => {
