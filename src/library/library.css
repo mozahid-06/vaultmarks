@@ -9,6 +9,7 @@
   --surface: #f8f9fb;
   --hover: #f2f4f8;
   --danger: #c0392b;
+  --popup-border: color-mix(in srgb, var(--accent) 60%, var(--line));
   --sidebar-width: 260px;
 }
 
@@ -547,11 +548,12 @@ button.danger:hover:not(:disabled) {
   width: min(640px, 92vw);
   max-height: calc(100% - 24px);
   overflow-y: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--popup-border);
   border-radius: 12px;
   background: var(--bg);
   color: var(--fg);
   padding: 16px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28);
 }
 
 .dialog::backdrop {
@@ -584,8 +586,9 @@ button.danger:hover:not(:disabled) {
   padding: 10px 16px;
   margin-bottom: 6px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--popup-border);
   border-radius: 8px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
 }
 
 .toast-error {
@@ -686,9 +689,9 @@ body.scanning .wordmark::after {
   margin-top: 2px;
   padding: 4px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--popup-border);
   border-radius: 8px;
-  box-shadow: 0 10px 24px rgba(12, 10, 20, 0.16);
+  box-shadow: 0 12px 28px rgba(12, 10, 20, 0.22);
 }
 
 .tag-menu[hidden] {
