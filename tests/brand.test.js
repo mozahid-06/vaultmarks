@@ -23,3 +23,67 @@ test('banner and social preview have the declared sizes', async () => {
   assert.match(await read('docs/brand/social-preview.svg'), /width="1280"[^>]*height="640"/);
   assert.deepEqual(pngSize(await readBuffer('docs/brand/social-preview.png')), [1280, 640]);
 });
+
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('extension tokens use the brand palette', async () => {
+  const css = await read('src/library/library.css');
+  const light = css.slice(0, css.indexOf('@media'));
+  const dark = css.slice(css.indexOf('@media'), css.indexOf('* {'));
+
+  for (const [token, value] of Object.entries({
+    '--bg': '#ffffff',
+    '--fg': '#1b1726',
+    '--muted': '#6b6478',
+    '--line': '#e7e2f0',
+    '--accent': '#6d4ae0',
+    '--accent-fg': '#ffffff',
+    '--surface': '#f8f6fc',
+    '--hover': '#f1edf9',
+  })) {
+    assert.match(light, new RegExp(`${token}: ${value};`), `light ${token}`);
+  }
+
+  for (const [token, value] of Object.entries({
+    '--bg': '#14111d',
+    '--fg': '#ece9f5',
+    '--muted': '#a49db8',
+    '--line': '#322b45',
+    '--accent': '#a78bfa',
+    '--accent-fg': '#14101f',
+    '--surface': '#1d1829',
+    '--hover': '#262033',
+  })) {
+    assert.match(dark, new RegExp(`${token}: ${value};`), `dark ${token}`);
+  }
+
+  assert.match(css, /\.favicon-letter\s*\{[^}]*background: #5a3fd1;/);
+});
+
+test('brand token pairs meet WCAG AA', () => {
+  const pairs = [
+    ['#1b1726', '#ffffff'],
+    ['#6b6478', '#ffffff'],
+    ['#ffffff', '#6d4ae0'],
+    ['#ece9f5', '#14111d'],
+    ['#a49db8', '#14111d'],
+    ['#14101f', '#a78bfa'],
+    ['#c4b5fd', '#161226'],
+    ['#d7d3e3', '#161226'],
+    ['#a78bfa', '#161226'],
+  ];
+  for (const [fg, bg] of pairs) {
+    assert.ok(contrast(fg, bg) >= 4.5, `${fg} on ${bg} is ${contrast(fg, bg).toFixed(2)}:1`);
+  }
+});

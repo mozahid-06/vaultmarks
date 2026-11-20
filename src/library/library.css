@@ -1,13 +1,13 @@
 :root {
   color-scheme: light dark;
   --bg: #ffffff;
-  --fg: #1c1e21;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --accent: #5b7cfa;
+  --fg: #1b1726;
+  --muted: #6b6478;
+  --line: #e7e2f0;
+  --accent: #6d4ae0;
   --accent-fg: #ffffff;
-  --surface: #f8f9fb;
-  --hover: #f2f4f8;
+  --surface: #f8f6fc;
+  --hover: #f1edf9;
   --danger: #c0392b;
   --popup-border: color-mix(in srgb, var(--accent) 60%, var(--line));
   --sidebar-width: 260px;
@@ -15,14 +15,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1b1d21;
-    --fg: #e8eaed;
-    --muted: #9aa0a6;
-    --line: #33363b;
-    --accent: #7d94ff;
-    --accent-fg: #10131a;
-    --surface: #24272c;
-    --hover: #2b2f34;
+    --bg: #14111d;
+    --fg: #ece9f5;
+    --muted: #a49db8;
+    --line: #322b45;
+    --accent: #a78bfa;
+    --accent-fg: #14101f;
+    --surface: #1d1829;
+    --hover: #262033;
     --danger: #f07171;
   }
 }
@@ -449,7 +449,7 @@ button.danger:hover:not(:disabled) {
   width: 20px;
   height: 20px;
   border-radius: 5px;
-  background: #0f766e;
+  background: #5a3fd1;
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
