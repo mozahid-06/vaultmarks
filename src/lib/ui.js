@@ -89,6 +89,7 @@ export function toast(message, kind = 'info') {
 }
 
 const tagInputs = new WeakMap();
+let tagMenuSeq = 0;
 
 export function createTagInput({ input, chips, initial = [], suggestions = [], exclude = [] }) {
   // Re-wiring the same input must not stack listeners: a stale instance would
@@ -97,8 +98,148 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
 
   const tags = [];
   const excluded = new Set(exclude.map((tag) => tag.toLowerCase()));
+  const known = [];
+  const knownKeys = new Set();
+  for (const raw of suggestions) {
+    const name = String(raw ?? '').trim();
+    if (name === '') continue;
+    const key = name.toLowerCase();
+    if (knownKeys.has(key) || excluded.has(key)) continue;
+    knownKeys.add(key);
+    known.push(name);
+  }
+
   const controller = new AbortController();
   const { signal } = controller;
+
+  const menu = h('div', {
+    className: 'tag-menu',
+    role: 'listbox',
+    id: `tag-menu-${(tagMenuSeq += 1)}`,
+  });
+  menu.hidden = true;
+  (input.parentElement ?? document.body).append(menu);
+
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', menu.id);
+  input.setAttribute('aria-expanded', 'false');
+
+  let options = [];
+  let activeIndex = -1;
+
+  const closeMenu = () => {
+    menu.hidden = true;
+    menu.replaceChildren();
+    options = [];
+    activeIndex = -1;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+  };
+
+  const positionMenu = () => {
+    if (typeof input.getBoundingClientRect !== 'function' || typeof window === 'undefined') return;
+    const rect = input.getBoundingClientRect();
+    const viewport = window.innerHeight || 0;
+    const below = viewport - rect.bottom - 12;
+    const above = rect.top - 12;
+    const openAbove = below < 140 && above > below;
+    menu.style.position = 'fixed';
+    menu.style.left = `${rect.left}px`;
+    menu.style.width = `${rect.width}px`;
+    menu.style.maxHeight = `${Math.max(80, Math.min(240, openAbove ? above : below))}px`;
+    if (openAbove) {
+      menu.style.top = 'auto';
+      menu.style.bottom = `${viewport - rect.top + 4}px`;
+    } else {
+      menu.style.top = `${rect.bottom + 4}px`;
+      menu.style.bottom = 'auto';
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    const reposition = () => {
+      if (!menu.hidden) positionMenu();
+    };
+    window.addEventListener('resize', reposition, { signal });
+    window.addEventListener('scroll', reposition, { signal, capture: true });
+  }
+
+  const setActive = (index) => {
+    if (options.length === 0) return;
+    activeIndex = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      const active = position === activeIndex;
+      option.node.className = `tag-option${active ? ' active' : ''}`;
+      option.node.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    input.setAttribute('aria-activedescendant', options[activeIndex].node.id);
+    const node = options[activeIndex].node;
+    if (typeof node.scrollIntoView === 'function') node.scrollIntoView({ block: 'nearest' });
+  };
+
+  const choose = (option) => {
+    add(option.value);
+    input.value = '';
+    closeMenu();
+    if (typeof input.focus === 'function') input.focus();
+  };
+
+  const openMenu = () => {
+    const query = input.value.trim();
+    const lower = query.toLowerCase();
+    const taken = new Set(tags.map((tag) => tag.toLowerCase()));
+    const matches = known.filter((name) => {
+      const key = name.toLowerCase();
+      if (taken.has(key)) return false;
+      return lower === '' || key.includes(lower);
+    });
+    const exact = lower === '' ? null : known.find((name) => name.toLowerCase() === lower) ?? null;
+    const canCreate = lower !== '' && exact === null && !taken.has(lower) && !excluded.has(lower);
+    if (matches.length === 0 && !canCreate) {
+      closeMenu();
+      return;
+    }
+
+    const rows = matches.map((name) => ({ value: name, create: false }));
+    if (canCreate) rows.push({ value: query, create: true });
+
+    options = rows.map((row, index) => {
+      const node = h(
+        'div',
+        {
+          className: 'tag-option',
+          role: 'option',
+          id: `${menu.id}-option-${index}`,
+          'aria-selected': 'false',
+        },
+        row.create
+          ? [icon('plus'), h('span', { text: `Create “${row.value}”` })]
+          : h('span', { className: 'tag-option-name', text: row.value }),
+      );
+      node.addEventListener(
+        'pointerdown',
+        (event) => {
+          event.preventDefault();
+          choose(row);
+        },
+        { signal },
+      );
+      return { ...row, node };
+    });
+
+    menu.replaceChildren(...options.map((option) => option.node));
+    menu.hidden = false;
+    positionMenu();
+    input.setAttribute('aria-expanded', 'true');
+    const exactIndex = matches.findIndex((name) => name.toLowerCase() === lower);
+    if (exactIndex === -1) {
+      activeIndex = -1;
+      input.removeAttribute('aria-activedescendant');
+    } else {
+      setActive(exactIndex);
+    }
+  };
 
   const render = () => {
     chips.replaceChildren(
@@ -139,21 +280,56 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
     render();
   };
 
-  const datalist = h('datalist', { id: `tag-suggestions-${input.id || 'tags'}` });
-  document.getElementById(datalist.id)?.remove();
-  datalist.append(...suggestions.map((name) => h('option', { value: name })));
-  (input.parentElement ?? document.body).append(datalist);
-  input.setAttribute('list', datalist.id);
+  input.removeAttribute('list');
 
+  input.addEventListener(
+    'input',
+    () => {
+      openMenu();
+    },
+    { signal },
+  );
+  input.addEventListener(
+    'focus',
+    () => {
+      openMenu();
+    },
+    { signal },
+  );
+  input.addEventListener(
+    'click',
+    () => {
+      openMenu();
+    },
+    { signal },
+  );
   input.addEventListener(
     'keydown',
     (event) => {
-      if (event.key === 'Enter' || event.key === ',') {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const option = menu.hidden ? null : options[activeIndex];
+        if (option) choose(option);
+        else {
+          add(input.value);
+          input.value = '';
+          closeMenu();
+        }
+      } else if (event.key === ',') {
         event.preventDefault();
         add(input.value);
         input.value = '';
+        closeMenu();
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (menu.hidden) openMenu();
+        if (!menu.hidden) setActive(activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+      } else if (event.key === 'Escape' && !menu.hidden) {
+        event.preventDefault();
+        closeMenu();
       } else if (event.key === 'Backspace' && input.value === '' && tags.length > 0) {
         remove(tags.length - 1);
+        if (!menu.hidden) openMenu();
       }
     },
     { signal },
@@ -165,6 +341,7 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
         add(input.value);
         input.value = '';
       }
+      closeMenu();
     },
     { signal },
   );
@@ -179,7 +356,15 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
       for (const tag of next ?? []) add(tag);
       render();
     },
-    dispose: () => controller.abort(),
+    dispose: () => {
+      controller.abort();
+      menu.remove();
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('role');
+      input.removeAttribute('aria-autocomplete');
+      input.removeAttribute('aria-controls');
+      input.removeAttribute('aria-activedescendant');
+    },
   };
   tagInputs.set(input, handle);
   return handle;
