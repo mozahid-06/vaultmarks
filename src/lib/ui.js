@@ -187,13 +187,15 @@ export function createTagInput({ input, chips, initial = [], suggestions = [], e
 
 export function collectionOptions(index) {
   const options = [{ value: '', label: 'Unfiled' }];
-  const walk = (nodes, depth) => {
+  const walk = (nodes) => {
     for (const node of nodes) {
-      options.push({ value: node.path, label: `${'  '.repeat(depth)}${node.name}` });
-      walk(node.children, depth + 1);
+      // Browsers collapse leading spaces in <option> labels, so indentation is
+      // invisible there. The path is the only reliable way to show nesting.
+      options.push({ value: node.path, label: node.path });
+      walk(node.children);
     }
   };
-  walk(index?.collections ?? [], 0);
+  walk(index?.collections ?? []);
   return options;
 }
 
