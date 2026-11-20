@@ -331,6 +331,46 @@ button.danger:hover:not(:disabled) {
   outline-offset: 1px;
 }
 
+.main-head #sort,
+.main-head #sort::picker(select) {
+  appearance: base-select;
+}
+
+.main-head #sort::picker(select) {
+  margin-top: 4px;
+  padding: 4px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+}
+
+.main-head #sort option {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+  background: var(--surface);
+}
+
+.main-head #sort option:hover,
+.main-head #sort option:focus-visible {
+  background: var(--hover);
+}
+
+.main-head #sort option:checked {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.main-head #sort option::checkmark {
+  display: none;
+}
+
+.main-head #sort::picker-icon {
+  color: var(--muted);
+}
+
 .main-head-actions {
   display: flex;
   align-items: center;

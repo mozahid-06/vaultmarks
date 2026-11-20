@@ -59,3 +59,10 @@ test('the sort control and quick-save button follow the panel palette', async ()
   assert.match(css, /\.main-head #sort\s*\{[^}]*color:\s*var\(--fg\)/);
   assert.match(css, /\.main-toolbar #new-bookmark\s*\{[^}]*border-radius:\s*50%/);
 });
+
+test('the sort picker uses the panel palette', async () => {
+  const css = await read('src/library/library.css');
+  assert.match(css, /appearance:\s*base-select/);
+  assert.match(css, /::picker\(select\)\s*\{[^}]*background:\s*var\(--surface\)/);
+  assert.match(css, /#sort option:checked\s*\{[^}]*color:\s*var\(--accent\)/);
+});
