@@ -317,7 +317,7 @@ function renderFaviconFallback(container, domain, faviconUrl) {
         container.createEl("div", {
             text: domain,
             attr: {
-                style: `margin-top: 8px; font-family: var(--font-monospace, monospace); font-size: 0.68em; color: ${COLORS.domainLabel}; opacity: 0.6; text-align: center; padding: 0 6px; word-break: break-all;`
+                style: `margin-top: 8px; font-family: var(--font-monospace, monospace); font-size: 0.68em; color: ${COLORS.domainLabel}; opacity: 0.8; text-align: center; padding: 0 6px; word-break: break-all;`
             }
         });
     }
@@ -494,7 +494,7 @@ function renderCards(files, container, tokens) {
         bottomRow.createEl("span", {
             text: url,
             cls: "bv-card-url",
-            attr: { style: `font-size: 0.78em; color: ${COLORS.url}; opacity: 0.55; word-break: break-all; flex: 1; min-width: 0;` }
+            attr: { style: `font-size: 0.78em; color: ${COLORS.url}; opacity: 0.8; word-break: break-all; flex: 1; min-width: 0;` }
         });
 
         const actions = bottomRow.createEl("div", {

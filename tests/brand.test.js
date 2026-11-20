@@ -124,3 +124,9 @@ test('repo viewer matches the live note and keeps recent behaviour', async () =>
 test('README screenshots exist at their declared sizes', async () => {
   assert.deepEqual(pngSize(await readBuffer('docs/brand/panel.png')), [1560, 1200]);
 });
+
+test('phone capture is a tall 390px-wide view', async () => {
+  const [width, height] = pngSize(await readBuffer('docs/brand/phone.png'));
+  assert.equal(width, 780);
+  assert.ok(height > 1200, `phone capture is ${width}x${height}`);
+});
