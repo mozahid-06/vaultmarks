@@ -33,7 +33,7 @@
       <main class="main">
         <div class="main-toolbar">
           <input id="search" type="search" placeholder="Search bookmarks..." autocomplete="off" spellcheck="false">
-          <button id="new-bookmark" class="icon-button" type="button" title="New bookmark" aria-label="New bookmark"></button>
+          <button id="new-bookmark" class="icon-button" type="button" title="Quick save this page" aria-label="Quick save this page"></button>
           <button id="save-page" class="primary" type="button">Save page</button>
         </div>
         <div id="reconnect" class="banner" hidden>
@@ -43,6 +43,7 @@
         <div class="main-head">
           <h1 id="collection-title">All bookmarks</h1>
           <span id="summary" class="muted"></span>
+          <button id="new-blank" type="button" title="New bookmark">New</button>
         </div>
         <div id="list" class="list"></div>
         <p id="empty" class="empty" hidden></p>
@@ -76,24 +77,25 @@
       <form id="detail-form" hidden>
         <img id="detail-form-cover" class="detail-cover" alt="" hidden>
         <h2 id="detail-form-heading"></h2>
-        <label class="field">
-          <span class="field-label">Title</span>
+        <p id="detail-form-note" class="muted" hidden></p>
+        <label class="field" id="field-title">
+          <span class="field-label" id="field-title-label">Title</span>
           <input id="detail-title" type="text" autocomplete="off" spellcheck="false">
         </label>
-        <label class="field">
+        <label class="field" id="field-url">
           <span class="field-label">URL</span>
           <input id="detail-url" type="text" autocomplete="off" spellcheck="false">
         </label>
-        <label class="field">
+        <label class="field" id="field-description">
           <span class="field-label">Description</span>
           <textarea id="detail-description" rows="4"></textarea>
         </label>
-        <div class="field">
+        <div class="field" id="field-tags">
           <span class="field-label">Tags</span>
           <div id="detail-tags" class="chips"></div>
           <input id="detail-tag-input" class="tag-input" type="text" placeholder="Add a tag..." autocomplete="off" spellcheck="false">
         </div>
-        <label class="field">
+        <label class="field" id="field-collection">
           <span class="field-label">Collection</span>
           <select id="detail-collection"></select>
         </label>

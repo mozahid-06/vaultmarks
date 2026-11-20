@@ -18,8 +18,9 @@ test('library has no inline script or handlers and the wiring ids exist', async 
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
   for (const id of [
     'onboarding', 'reconnect', 'sidebar', 'all', 'collections', 'search', 'list', 'empty',
-    'new-bookmark', 'settings', 'detail',
+    'new-bookmark', 'new-blank', 'settings', 'detail',
     'detail-title', 'detail-url', 'detail-description', 'detail-tags', 'detail-collection',
+    'field-title', 'field-url', 'field-description', 'field-tags', 'detail-form-note',
     'detail-save', 'detail-cancel', 'detail-open', 'detail-edit', 'detail-delete',
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
@@ -29,7 +30,7 @@ test('library has no inline script or handlers and the wiring ids exist', async 
 test('the library page is the panel by default and has the panel wiring', async () => {
   const html = await read('src/library/library.html');
   assert.match(html, /<html[^>]*class="panel"/);
-  for (const id of ['expand', 'open-settings', 'sidebar-header', 'search', 'new-bookmark', 'save-page', 'detail-form-cover']) {
+  for (const id of ['expand', 'open-settings', 'sidebar-header', 'search', 'new-bookmark', 'new-blank', 'save-page', 'detail-form-cover']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
 });

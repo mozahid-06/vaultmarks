@@ -27,15 +27,22 @@ Load unpacked from `chrome://extensions` if the flag is not used.
       shown at the top (read-only).
 - [ ] Saving writes the note and it appears in the list immediately (and in an
       open library tab via `vault-changed`).
-- [ ] With `chrome://settings` active, **Save page** toasts
+- [ ] With `chrome://settings` active, **Save page** and **+** both toast
       "This page can't be saved." and nothing else changes.
 - [ ] Saving the same URL twice says **Already saved in &lt;collection&gt;**
       with **Open** and **Save anyway**; **Save anyway** writes a second note
       (`Name (2).md`).
-- [ ] **Save page** defaults to the last-used collection; **+ New** defaults to
-      the selected collection and does not change the last-used one.
-- [ ] The ⤢ button opens the same view as a full tab, where **Save page** and
-      ⤢ are hidden and the sidebar and list fill the window.
+- [ ] **+** opens Quick save with the name pre-filled and selected, and the
+      collection defaulting to the last used one; <kbd>Enter</kbd> writes the
+      note there and toasts "Saved".
+- [ ] Typing over the name in Quick save names the file after it; clearing the
+      name falls back to the page title.
+- [ ] Quick save asks for the collection and writes into the one picked; the
+      choice becomes the last-used one.
+- [ ] **New** opens the empty form and defaults the collection to the selected
+      one without changing the last-used one.
+- [ ] The ⤢ button opens the same view as a full tab, where **Save page**, **+**
+      and ⤢ are hidden (New stays) and the sidebar and list fill the window.
 - [ ] The save form's **Save**/**Cancel** can never be clipped: the dialog
       scrolls inside the 600 px panel.
 - [ ] Conflicting note: edit one in Obsidian between loading and saving it from
@@ -107,10 +114,10 @@ Load unpacked from `chrome://extensions` if the flag is not used.
 - [ ] **Move to…** changes the folder on disk.
 - [ ] Delete asks for confirmation and moves the note into
       `.vaultmarks-trash`; the file is gone from its old location.
-- [ ] **+** (new bookmark) writes a correct note into the chosen collection,
-      with the exact frontmatter shape (`title`, `url`, `created`,
-      `description`, optional `image` / `favicon`, `tags` with `bookmarks`,
-      blank line, cover, description, `[Open original ↗](url)`).
+- [ ] **+** (quick save) and **New** both write the exact frontmatter shape
+      (`title`, `url`, `created`, `description`, optional `image` / `favicon`,
+      `tags` with `bookmarks`, blank line, cover, description,
+      `[Open original ↗](url)`); quick save fills it from the page you are on.
 - [ ] Conflict: open a note in an editor, change one byte, then save from the
       detail panel — the conflict message appears, **Reload** refreshes it,
       and the file on disk is unchanged until you save again.

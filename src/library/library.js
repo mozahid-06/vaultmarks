@@ -414,7 +414,8 @@ function renderDetailView(note) {
 function renderDetailEdit(note) {
   el('detail-view').hidden = true;
   el('detail-form').hidden = false;
-  const headings = { save: 'Save bookmark', create: 'New bookmark', edit: 'Edit bookmark' };
+  const quick = state.mode === 'quick';
+  const headings = { save: 'Save bookmark', create: 'New bookmark', quick: 'Quick save', edit: 'Edit bookmark' };
   el('detail-form-heading').textContent = headings[state.mode] ?? 'Edit bookmark';
 
   const source = state.mode === 'edit' ? note : state.prefill;
@@ -422,8 +423,15 @@ function renderDetailEdit(note) {
   el('detail-url').value = source?.url ?? '';
   el('detail-description').value = source?.description ?? '';
 
+  el('field-title-label').textContent = quick ? 'Name' : 'Title';
+  for (const id of ['field-url', 'field-description', 'field-tags']) el(id).hidden = quick;
+  const noteEl = el('detail-form-note');
+  noteEl.hidden = !quick;
+  noteEl.textContent = quick ? (source?.url ?? '') : '';
+  noteEl.title = quick ? (source?.url ?? '') : '';
+
   const cover = el('detail-form-cover');
-  if (state.captured?.image) {
+  if (!quick && state.captured?.image) {
     cover.src = state.captured.image;
     cover.hidden = false;
   } else {
@@ -448,7 +456,8 @@ function renderDetailEdit(note) {
   });
 
   setDetailStatus(null);
-  el('detail-title').focus();
+  if (quick) el('detail-title').select();
+  else el('detail-title').focus();
 }
 
 function openDetail(note, mode) {
@@ -464,6 +473,19 @@ function openCreate(prefill = null) {
   state.mode = prefill ? 'save' : 'create';
   state.prefill = prefill;
   state.captured = prefill ? { image: prefill.image, favicon: prefill.favicon } : null;
+  state.saveAnyway = false;
+  state.currentNote = null;
+  el('detail').showModal();
+  state.dialogOpen = true;
+  renderDetailEdit(null);
+}
+
+// Quick save: the page is already captured, so only the name and the
+// collection are asked for before writing it.
+function openQuickSave(prefill) {
+  state.mode = 'quick';
+  state.prefill = prefill;
+  state.captured = { image: prefill.image, favicon: prefill.favicon };
   state.saveAnyway = false;
   state.currentNote = null;
   el('detail').showModal();
@@ -570,7 +592,8 @@ async function deleteNote(note) {
 
 async function onDetailSubmit(event) {
   event.preventDefault();
-  const title = el('detail-title').value.trim();
+  const typedTitle = el('detail-title').value.trim();
+  const title = typedTitle || (state.mode === 'quick' ? (state.prefill?.title ?? '') : '');
   const url = el('detail-url').value.trim();
   const description = el('detail-description').value.trim();
   const dir = el('detail-collection').value;
@@ -589,7 +612,7 @@ async function onDetailSubmit(event) {
 
   el('detail-save').disabled = true;
   try {
-    if (state.mode === 'create' || state.mode === 'save') {
+    if (state.mode === 'create' || state.mode === 'save' || state.mode === 'quick') {
       if (!state.index) {
         setDetailStatus('Reconnect the vault folder first.');
         return;
@@ -609,7 +632,7 @@ async function onDetailSubmit(event) {
         tags,
       });
       await writeNewFile(dir, filenameBase(title, domainOf(url)), text);
-      if (state.mode === 'save') state.settings = await saveSettings({ lastCollection: dir });
+      if (state.mode === 'save' || state.mode === 'quick') state.settings = await saveSettings({ lastCollection: dir });
       notifyChanged();
       closeDetail();
       await refresh();
@@ -659,12 +682,36 @@ async function onDetailSubmit(event) {
 
 function wireDetail() {
   el('new-bookmark').addEventListener('click', async () => {
+    const button = el('new-bookmark');
+    button.disabled = true;
+    try {
+      let meta;
+      try {
+        meta = await captureActiveTab();
+      } catch {
+        toast("This page can't be saved.", 'error');
+        return;
+      }
+      await ensureIndex();
+      if (!state.index) {
+        toast('Reconnect the vault folder first.', 'error');
+        return;
+      }
+      openQuickSave(savePrefill(meta, {
+        lastCollection: state.settings?.lastCollection ?? '',
+        selectedCollection: state.collection,
+      }));
+    } finally {
+      button.disabled = false;
+    }
+  });
+  el('new-blank').addEventListener('click', async () => {
     await ensureIndex();
     openCreate();
   });
   el('detail-form').addEventListener('submit', onDetailSubmit);
   el('detail-cancel').addEventListener('click', () => {
-    if (state.mode === 'create' || state.mode === 'save') closeDetail();
+    if (state.mode === 'create' || state.mode === 'save' || state.mode === 'quick') closeDetail();
     else {
       state.mode = 'view';
       renderDetailView(state.currentNote);
@@ -966,7 +1013,10 @@ async function init() {
   el('expand').append(icon('external'));
   el('expand').addEventListener('click', () => openLibraryTab());
   if (tabView) el('expand').hidden = true;
-  if (tabView) el('save-page').hidden = true;
+  if (tabView) {
+    el('save-page').hidden = true;
+    el('new-bookmark').hidden = true;
+  }
   else el('save-page').addEventListener('click', onSavePage);
   el('open-settings').addEventListener('click', () => {
     renderSettings();

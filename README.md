@@ -8,7 +8,7 @@ full details of every bookmark.
 - **Panel** — the toolbar icon opens a two-pane panel: a collections sidebar
   and the bookmark list with search, sized for a Chromium popup (780×600).
   **Save page** captures the page you are on (title, URL, description, cover,
-  favicon, tags).
+  favicon, tags); the **+** next to the search box saves it in one step.
 - **Tab** — the expand button opens the same page as a full-width tab; the
   panel and the tab are one codebase and one dataset, so they can never drift.
 - **Obsidian view** — `obsidian/vaultmarks.md` is a ready-made DataviewJS
@@ -73,11 +73,24 @@ collection, then press **Save**. If the URL is already saved, Vaultmarks says
 where it lives and offers **Open** or **Save anyway**. The note then appears in
 the list, and its detail view offers **Open in Obsidian**.
 
+**Quick save.** Press **+** next to the search box on a normal web page.
+Vaultmarks captures the page and asks only two things: the collection and the
+name, pre-filled with the page title and selected so you can type over it.
+Press <kbd>Enter</kbd> to write the note; URL, description, cover, favicon,
+the `bookmarks` tag and today's date all come from the page. A duplicate URL is
+refused with *Already saved in ...* and the same **Open** / **Save anyway**
+choices. Clearing the name falls back to the page title.
+
+**New** (right side of the list header) opens the empty form when you need a
+bookmark that is not the page you are on — paste the URL and fill it in by
+hand.
+
 **Panel and tab.** The panel and the full tab (opened with the expand button)
-are the same page: search, list and detail are identical. Type in the search
-box (or press <kbd>/</kbd>) to filter by title, description, URL, domain or
-tags; <kbd>Esc</kbd> clears it. Click a collection in the sidebar to filter by
-folder. Hover a row for three actions:
+are the same page: search, list and detail are identical. The tab hides
+**Save page** and **+** because there is no page to capture there; **New**
+still works. Type in the search box (or press <kbd>/</kbd>) to filter by
+title, description, URL, domain or tags; <kbd>Esc</kbd> clears it. Click a
+collection in the sidebar to filter by folder. Hover a row for three actions:
 
 - **Details** — cover, title, URL, description, date, tags and collection,
   with **Open**, **Copy link**, **Edit**, **Move to...**, **Delete**,

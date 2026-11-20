@@ -280,6 +280,18 @@ button.primary {
   font-size: 12px;
 }
 
+.main-head #new-blank {
+  margin-left: auto;
+}
+
+#detail-form-note {
+  margin: -6px 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #new-bookmark {
   margin-left: auto;
 }
