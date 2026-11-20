@@ -29,10 +29,25 @@ import {
   faviconUrl,
   createTagInput,
   fillCollectionSelect,
+  isPastTop,
   openLibraryTab,
 } from '../lib/ui.js';
 
 const el = (id) => document.getElementById(id);
+
+function scrollOffset() {
+  return tabView ? window.scrollY : el('list').scrollTop;
+}
+
+function syncTopButton() {
+  el('to-top').hidden = !isPastTop(scrollOffset());
+}
+
+function backToTop() {
+  const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  if (tabView) window.scrollTo({ top: 0, behavior });
+  else el('list').scrollTo({ top: 0, behavior });
+}
 
 const state = {
   settings: null,
@@ -513,6 +528,7 @@ function renderList() {
   if (!document.body.classList.contains('scanning')) {
     el('summary').textContent = `${notes.length} bookmark${notes.length === 1 ? '' : 's'}`;
   }
+  syncTopButton();
 }
 
 const WRITE_ERRORS = {
@@ -1336,6 +1352,10 @@ async function init() {
   el('new-bookmark').append(icon('plus'));
   el('expand').append(icon('external'));
   el('expand').addEventListener('click', () => openLibraryTab());
+  el('to-top').append(icon('chevron-up'));
+  el('to-top').addEventListener('click', backToTop);
+  el('list').addEventListener('scroll', syncTopButton, { passive: true });
+  window.addEventListener('scroll', syncTopButton, { passive: true });
   if (tabView) el('expand').hidden = true;
   if (tabView) {
     el('save-page').hidden = true;

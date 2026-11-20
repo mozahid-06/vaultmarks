@@ -450,6 +450,28 @@ button.danger:hover:not(:disabled) {
   gap: 2px;
 }
 
+.to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+}
+
+.to-top:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
 .row {
   display: flex;
   align-items: flex-start;

@@ -66,3 +66,11 @@ test('the sort picker uses the panel palette', async () => {
   assert.match(css, /::picker\(select\)\s*\{[^}]*background:\s*var\(--surface\)/);
   assert.match(css, /#sort option:checked\s*\{[^}]*color:\s*var\(--accent\)/);
 });
+
+test('the panel offers a back-to-top button', async () => {
+  const html = await read('src/library/library.html');
+  assert.match(html, /<button[^>]*id="to-top"[^>]*aria-label="Back to top"[^>]*hidden/);
+  const css = await read('src/library/library.css');
+  assert.match(css, /\.to-top\s*\{[^}]*position:\s*fixed/);
+  assert.match(css, /\.to-top\s*\{[^}]*border-radius:\s*50%/);
+});
