@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createNoteText, patchFrontmatter, filenameBase, uniqueFilename, isStale } from '../src/lib/markdown.js';
+import { createNoteText, patchFrontmatter, filenameBase, uniqueFilename, isStale, parseNote } from '../src/lib/markdown.js';
 
 test('createNoteText produces the exact clipper shape', () => {
   const text = createNoteText({
@@ -30,6 +30,34 @@ A Cozy rice ❃
 
 [Open original ↗](https://github.com/darkkal44/cozytile)
 `);
+});
+
+test('URLs with parentheses or spaces keep their link and cover intact', () => {
+  const url = 'https://en.wikipedia.org/wiki/Obsidian_(software)';
+  const image = 'https://upload.wikimedia.org/foo bar_(1).png';
+  const text = createNoteText({
+    title: 'Obsidian', url, created: '2026-11-20',
+    description: 'A note-taking app.', image, favicon: '',
+  });
+
+  assert.ok(text.includes('image: "https://upload.wikimedia.org/foo bar_(1).png"'));
+  assert.ok(text.includes('![](<https://upload.wikimedia.org/foo%20bar_(1).png>)'));
+  assert.ok(text.includes('[Open original ↗](<https://en.wikipedia.org/wiki/Obsidian_(software)>)'));
+
+  const parsed = parseNote(text, { key: 'Bookmarks/Obsidian.md', lastModified: 0, size: 0 });
+  assert.equal(parsed.note.url, url);
+  assert.equal(parsed.note.image, image);
+  assert.equal(parsed.note.cover, image);
+
+  const bodyOnly = `---
+title: "T"
+url: "${url}"
+---
+
+![](<https://upload.wikimedia.org/foo%20bar_(1).png>)
+`;
+  const fromBody = parseNote(bodyOnly, { key: 'Bookmarks/T.md', lastModified: 0, size: 0 });
+  assert.equal(fromBody.note.cover, 'https://upload.wikimedia.org/foo%20bar_(1).png');
 });
 
 test('a minimal note omits empty image, favicon and description lines', () => {

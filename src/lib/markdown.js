@@ -80,8 +80,8 @@ function parseFrontmatterBlock(block) {
 }
 
 function firstBodyImage(body) {
-  const match = body.match(/!\[[^\]]*\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/);
-  return match ? match[1] : '';
+  const match = body.match(/!\[[^\]]*\]\(\s*(?:<([^>\n]+)>|([^)\s]+))(?:\s+"[^"]*")?\s*\)/);
+  return match ? (match[1] ?? match[2] ?? '') : '';
 }
 
 export function parseNote(text, meta) {
@@ -144,6 +144,17 @@ function quoteScalar(value) {
   return `"${flat.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+// A link or image destination in Markdown ends at the first `)` unless it is
+// wrapped in angle brackets. Wikipedia-style URLs (`..._(software)`) would
+// otherwise lose their tail and render as a broken link. Ordinary URLs keep
+// the plain form so existing notes look the same.
+function markdownDestination(value) {
+  const raw = String(value ?? '').trim();
+  if (raw === '') return '';
+  if (!/[\s()<>]/.test(raw)) return raw;
+  return `<${raw.replace(/</g, '%3C').replace(/>/g, '%3E').replace(/\s/g, '%20')}>`;
+}
+
 function normalizeTags(tags) {
   const seen = new Set();
   const out = [];
@@ -188,11 +199,11 @@ export function createNoteText({ title, url, created, description, image, favico
   lines.push('---');
 
   const body = [];
-  if (String(image ?? '').trim() !== '') body.push(`![](${image})`);
+  if (String(image ?? '').trim() !== '') body.push(`![](${markdownDestination(image)})`);
   if (String(description ?? '').trim() !== '') {
     body.push(String(description).replace(/\r\n|\r|\n/g, ' '));
   }
-  body.push(`[Open original ↗](${url})`);
+  body.push(`[Open original ↗](${markdownDestination(url)})`);
 
   return `${lines.join('\n')}\n\n${body.join('\n\n')}\n`;
 }

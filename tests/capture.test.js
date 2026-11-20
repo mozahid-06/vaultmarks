@@ -19,6 +19,13 @@ test('normalizeMeta resolves images, caps descriptions and falls back to the hos
   assert.equal(meta.favicon, 'https://example.com/favicon.ico');
 });
 
+test('normalizeMeta never cuts an emoji in half at the description cap', () => {
+  const prefix = 'a'.repeat(999);
+  const meta = normalizeMeta({ title: 'T', description: `${prefix}🙂tail` }, 'https://example.com');
+  assert.equal(meta.description.length, 999);
+  assert.doesNotMatch(meta.description, /[\uD800-\uDBFF]$/);
+});
+
 test('normalizeMeta keeps an http favicon and trims the title', () => {
   const meta = normalizeMeta({
     title: '  A   page ', url: 'https://example.com', description: 'Hi',

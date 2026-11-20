@@ -4,6 +4,17 @@ function collapse(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+// Cut without splitting a surrogate pair, so the note never ends with half an
+// emoji.
+function clip(value, max) {
+  const text = String(value ?? '');
+  if (text.length <= max) return text;
+  let end = Math.max(0, max);
+  const code = text.charCodeAt(end - 1);
+  if (code >= 0xd800 && code <= 0xdbff) end -= 1;
+  return text.slice(0, end);
+}
+
 function resolveHttpAsset(value, base) {
   const raw = String(value ?? '').trim();
   if (raw === '') return '';
@@ -40,7 +51,7 @@ export function normalizeMeta(raw, pageUrl) {
   return {
     title: collapse(source.title) || domainOf(page),
     url: isSavableUrl(page) ? page : '',
-    description: collapse(source.description).slice(0, 1000),
+    description: clip(collapse(source.description), 1000),
     image: resolveHttpAsset(source.image, page).slice(0, 2000),
     favicon,
   };
@@ -101,10 +112,12 @@ function extractMeta() {
     for (const root of roots) {
       if (!root) continue;
       const heading = [...root.querySelectorAll('h1')]
+        .filter((el) => !el.closest('[hidden], [aria-hidden="true"]'))
         .map((el) => squeeze(el.textContent))
         .find((text) => text.length >= 3 && pageTitle.includes(text.toLowerCase()));
       if (!heading) continue;
       for (const p of root.querySelectorAll('p')) {
+        if (p.closest('[hidden], [aria-hidden="true"]')) continue;
         const text = squeeze(p.textContent);
         if (text.length >= 100) return text.slice(0, 1200);
       }
